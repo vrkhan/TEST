@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - FBX loader</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		
+	</head>
+
+	<body style='margin : 0px; overflow: hidden; font-family: Monospace;'>
+
+		<div id="overlay">
+			<button id="startButton">Play</button>
+			<button id="muteButton">Mute</button>
+		</div>
+
+		<script type="module">
+
+			import * as THREE from './three.js-dev/build/three.module.js';
+
+			import Stats from './three.js-dev/examples/jsm/libs/stats.module.js';
+
+			import { OrbitControls } from './three.js-dev/examples/jsm/controls/OrbitControls.js';
+			import { FBXLoader } from './three.js-dev/examples/jsm/loaders/FBXLoader.js';
+
+			let camera, scene, renderer, stats;
+
+			const clock = new THREE.Clock();
+
+			let mixer;
+			let pom,eyel,eyer,mouth,eyelv,eyerv,mouthv;
+			let eyeltx1,eyeltx2,eyeltx3,eyertx1,eyertx2,eyertx3,mouthtx1,mouthtx2,mouthtx3,mouthtx4;
+			let bd;
+			//오디오 리스너 생성
+			const listener = new THREE.AudioListener();
+			//리스너에 연결된 사운드 생성
+			const sound = new THREE.Audio( listener );
+
+			const startButton = document.getElementById( 'startButton' );
+			startButton.addEventListener( 'click', audioPlay );
+
+			const muteButton = document.getElementById( 'muteButton' );
+			muteButton.addEventListener( 'click', audioMute );
+			function audioPlay() {
+				if(sound.isPlaying == false){
+					sound.play();
+				}else{
+					sound.pause();
+				}
+				//pom.morphTargetInfluences[1] = .8;
+				//블렌드쉐입키적용중임 단지 블렌드쉐입이 적용 안되는중
+				// console.log(pom);
+				// console.log(pom.morphTargetInfluences);
+				// console.log(pom.morphTargetInfluences[0]);
+				// console.log(pom.morphTargetInfluences[1]);
+				// console.log(bd);
+				//console.log(bd["blendShape1.polySurface139"]);
+				//console.log(bd[0]);
+
+
+			}
+
+			function audioMute() {
+				if(sound.getVolume() == 0){
+					sound.setVolume(1);
+				}else{
+					sound.setVolume(0);
+				}
+			}
+			init();
+
+
+			//초기셋팅
+			function init() {
+				//도큐먼트 컨트롤 : div를 생성후 바디에 포함
+				const container = document.createElement( 'div' );
+				document.body.appendChild( container );
+				//카메라 생성후 포지션 설정
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
+				camera.position.set( 100, 200, 300 );
+
+
+				//오디오 로더 생성
+				const audioLoader = new THREE.AudioLoader();
+				//오디오 로더를 통한 음악 로드
+				audioLoader.load( './Assets/Sounds/Crazy-Heart_AdobeStock.m4a', function( buffer ) {
+					sound.setBuffer( buffer );
+					sound.setLoop( true );
+					sound.setVolume( 1 );
+				});
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0xa0a0a0 );
+				scene.fog = new THREE.Fog( 0xa0a0a0, 200, 1000 );
+
+				const hemiLight = new THREE.HemisphereLight( 0xffffff, 0x444444 );
+				hemiLight.position.set( 0, 200, 0 );
+				scene.add( hemiLight );
+				scene.add(sound);
+
+				const dirLight = new THREE.DirectionalLight( 0xffffff );
+				dirLight.position.set( 0, 200, 100 );
+				dirLight.castShadow = true;
+				dirLight.shadow.camera.top = 180;
+				dirLight.shadow.camera.bottom = - 100;
+				dirLight.shadow.camera.left = - 120;
+				dirLight.shadow.camera.right = 120;
+				scene.add( dirLight );
+
+				// scene.add( new THREE.CameraHelper( dirLight.shadow.camera ) );
+
+				// ground
+				const mesh = new THREE.Mesh( new THREE.PlaneGeometry( 2000, 2000 ), new THREE.MeshPhongMaterial( { color: 0x999999, depthWrite: false } ) );
+				mesh.rotation.x = - Math.PI / 2;
+				mesh.receiveShadow = true;
+				scene.add( mesh );
+
+				const grid = new THREE.GridHelper( 2000, 20, 0x000000, 0x000000 );
+				grid.material.opacity = 0.2;
+				grid.material.transparent = true;
+				scene.add( grid );
+
+				// model
+				const loader = new FBXLoader();
+				loader.load( './Assets/FBX/FBXExTest.fbx', function ( object ) {
+
+					mixer = new THREE.AnimationMixer( object );
+
+					// object.animations[ 0 ].duration=1.25;
+					// const visKF1 = new THREE.BooleanKeyframeTrack( 'pSphere2.visible', [0.375 , 0.416666 ], [ true, false ] );
+					// const visKF2 = new THREE.BooleanKeyframeTrack( 'pSphere1.visible', [0.375 , 0.416666 , 0.833333], [ false, true, false ] );
+					// const visKF3 = new THREE.BooleanKeyframeTrack( 'pSphere3.visible', [0.791666 , 0.833333 ], [ false, true ] );
+					// object.animations[ 0 ].tracks.push(visKF1)
+					// object.animations[ 0 ].tracks.push(visKF2)
+					// object.animations[ 0 ].tracks.push(visKF3)
+
+					console.log(object.animations);
+					const action = mixer.clipAction( object.animations[ 0 ] );
+					action.play();
+
+					object.traverse( function ( child ) {
+
+						if ( child.isMesh ) {
+
+							child.castShadow = true;
+							child.receiveShadow = true;
+
+						}
+
+					} );
+					//블랜드쉐입 컨트롤 값을 찾아라
+					console.log(object);
+
+					eyer = object.getObjectByName('Byulsong_Byuldol_eye_R');
+					eyel = object.getObjectByName('Byulsong_Byuldol_eye_L');
+					mouth = object.getObjectByName('Byulsong_mouth');
+					eyerv = object.getObjectByName('RightEyeValue');
+					eyelv = object.getObjectByName('LeftEyeValue');
+					mouthv = object.getObjectByName('MouthValue');
+
+					eyerv.visible=false;
+					eyelv.visible=false;
+					mouthv.visible=false;
+					
+					eyertx1=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/Eye_R/Eye_R_001.png");
+					eyertx2=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/Eye_R/Eye_R_002.png");
+					eyertx3=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/Eye_R/Eye_R_011.png");
+					eyeltx1=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/Eye_L/Eye_L_001.png");
+					eyeltx2=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/Eye_L/Eye_L_002.png");
+					eyeltx3=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/Eye_L/Eye_L_011.png");
+					mouthtx1=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/mouth/mouth_001.png");
+					mouthtx2=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/mouth/mouth_005.png");
+					mouthtx3=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/mouth/mouth_009.png");
+					mouthtx4=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/mouth/mouth_023.png");
+
+					console.log(eyelv.position.x);
+
+					//pom =object.getObjectByName('Pom');
+					//pom =object.getObjectByName('pSphere1');
+					//pom.visible=false;
+					//bd = object.getObjectByName('file5');
+					//pom.morphTargetDictionary['blendShape1.polySurface139']=1;
+					//console.log(pom);
+					//console.log(pom.visible);
+					//bd=object.visible;
+					//console.log(object.visible);
+					//console.log(pom.material);
+					//console.log(pom.material.alphaMap);
+					//console.log(pom.material.alphaMap.image);
+					//pom.material.alphaMap=THREE.ImageUtils.loadTexture("./mouth/mouth_002.png");
+					//pom.material.alphaMap
+					//console.log(pom.material.alphaMap);
+					//console.log(pom.material.alphaMap.image);
+					//console.log(pom.morphTargetInfluences);
+					//bd[0]=0;
+					
+					//console.log(bd);
+					//console.log(pom.morphTargetInfluences);
+					console.log("success");
+
+					scene.add( object );
+
+				} );
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.shadowMap.enabled = true;
+				container.appendChild( renderer.domElement );
+
+				const controls = new OrbitControls( camera, renderer.domElement );
+				controls.target.set( 0, 100, 0 );
+				controls.update();
+
+				window.addEventListener( 'resize', onWindowResize );
+
+				// stats
+				//stats = new Stats();
+				//container.appendChild( stats.dom );
+
+				animate();
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				const delta = clock.getDelta();
+
+				//console.log(mixer.time);
+
+				if ( mixer ){
+
+					switch(eyerv.position.x){
+						case 0:
+							eyer.material.alphaMap=eyertx1;
+							break;
+						case 1:
+							eyer.material.alphaMap=eyertx2;
+							break;
+						case 10:
+							eyer.material.alphaMap=eyertx3;
+							break;
+					}
+					switch(eyelv.position.x){
+						case 0:
+							eyel.material.alphaMap=eyeltx1;
+							break;
+						case 1:
+							eyel.material.alphaMap=eyeltx2;
+							break;
+						case 10:
+							eyel.material.alphaMap=eyeltx3;
+							break;
+					}
+					switch(mouthv.position.x){
+						case 1:
+							mouth.material.alphaMap=mouthtx1;
+							break;
+						case 5:
+							mouth.material.alphaMap=mouthtx2;
+							break;
+						case 9:
+							mouth.material.alphaMap=mouthtx3;
+							break;
+						case 23:
+							mouth.material.alphaMap=mouthtx4;
+							break;
+					}
+					mixer.update( delta );
+				}
+				
+				renderer.render( scene, camera );
+
+				//stats.update();
+
+			}
+
+		</script>
+
+	</body>
+</html>
