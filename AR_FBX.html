@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>GeoAR.js demo</title>
+
+    <script src='js/three.js'></script>
+	<!-- include jsartookit -->
+	<script src="./build/artoolkit.min.js"></script>
+	<script src="./js/artoolkit.api.js"></script>
+	<!-- include threex.artoolkit -->
+	<script src="./threex/threex-artoolkitsource.js"></script>
+	<script src="./threex/threex-artoolkitcontext.js"></script>
+	<script src="./threex/threex-arbasecontrols.js"></script>
+	<script src="./threex/threex-armarkercontrols.js"></script>
+
+    <script src="./ar-nft.js"></script>
+</head>
+
+<body style='margin : 0px; overflow: hidden; font-family: Monospace;'>
+    <script type="module">
+        import { FBXLoader } from './three.js-dev/examples/jsm/loaders/FBXLoader.js';
+        var scene, camera, renderer, clock, deltaTime, totalTime;
+        
+        var arToolkitSource, arToolkitContext;
+        
+        var markerRoot1;
+        
+        var mesh1;
+
+        let mixer;
+        let pom,eyel,eyer,mouth,eyelv,eyerv,mouthv;
+		let eyeltx1,eyeltx2,eyeltx3,eyertx1,eyertx2,eyertx3,mouthtx1,mouthtx2,mouthtx3,mouthtx4;
+		let bd;
+
+        initialize();
+        animate();
+        
+        function initialize()
+        {
+            scene = new THREE.Scene();
+        
+            // let ambientLight = new THREE.AmbientLight( 0xcccccc, 1.0 );
+            // scene.add( ambientLight );
+            const hemiLight = new THREE.HemisphereLight( 0xffffff, 0x444444 );
+            hemiLight.position.set( 0, 2, 0 );
+            scene.add( hemiLight );
+
+            const dirLight = new THREE.DirectionalLight( 0xffffff );
+            dirLight.position.set( 0, 200, 100 );
+            dirLight.castShadow = true;
+            dirLight.shadow.camera.top = 180;
+            dirLight.shadow.camera.bottom = - 100;
+            dirLight.shadow.camera.left = - 120;
+            dirLight.shadow.camera.right = 120;
+            scene.add( dirLight );
+
+            camera = new THREE.Camera();
+            scene.add(camera);
+        
+            renderer = new THREE.WebGLRenderer({
+                antialias : true,
+                alpha: true
+            });
+            renderer.setClearColor(new THREE.Color('lightgrey'), 0)
+            renderer.setSize( 640, 480 );
+            renderer.domElement.style.position = 'absolute'
+            renderer.domElement.style.top = '0px'
+            renderer.domElement.style.left = '0px'
+            document.body.appendChild( renderer.domElement );
+        
+            clock = new THREE.Clock();
+            deltaTime = 0;
+            totalTime = 0;
+            
+            ////////////////////////////////////////////////////////////
+            // setup arToolkitSource
+            ////////////////////////////////////////////////////////////
+        
+            arToolkitSource = new THREEx.ArToolkitSource({
+                sourceType : 'webcam',
+            });
+        
+            function onResize()
+            {
+                arToolkitSource.onResize()	
+                arToolkitSource.copySizeTo(renderer.domElement)	
+                if ( arToolkitContext.arController !== null )
+                {
+                    arToolkitSource.copySizeTo(arToolkitContext.arController.canvas)	
+                }	
+            }
+        
+            arToolkitSource.init(function onReady(){
+                onResize()
+            });
+            
+            // handle resize event
+            window.addEventListener('resize', function(){
+                onResize()
+            });
+            
+            ////////////////////////////////////////////////////////////
+            // setup arToolkitContext
+            ////////////////////////////////////////////////////////////	
+        
+            // create atToolkitContext
+            arToolkitContext = new THREEx.ArToolkitContext({
+                cameraParametersUrl: 'data/camera_para.dat',
+                detectionMode: 'mono'
+            });
+            
+            // copy projection matrix to camera when initialization complete
+            arToolkitContext.init( function onCompleted(){
+                camera.projectionMatrix.copy( arToolkitContext.getProjectionMatrix() );
+            });
+        
+            ////////////////////////////////////////////////////////////
+            // setup markerRoots
+            ////////////////////////////////////////////////////////////
+        
+            // build markerControls
+            markerRoot1 = new THREE.Group();
+            scene.add(markerRoot1);
+            let markerControls1 = new THREEx.ArMarkerControls(arToolkitContext, markerRoot1, {
+                type: 'pattern', patternUrl: "data/hiro.patt",
+            })
+        
+            let geometry1 = new THREE.PlaneBufferGeometry(1,1, 4,4);
+            //let loader = new THREE.TextureLoader();
+            // let texture = loader.load( 'images/earth.jpg', render );
+            let material1 = new THREE.MeshBasicMaterial( { color: 0x0000ff, opacity: 0.5 } );
+            mesh1 = new THREE.Mesh( geometry1, material1 );
+            mesh1.rotation.x = -Math.PI/2;
+            markerRoot1.add( mesh1 );
+            
+            function onProgress(xhr) { console.log( (xhr.loaded / xhr.total * 100) + '% loaded' ); }
+            function onError(xhr) { console.log( 'An error happened' ); }
+            
+            //new THREE.FBXLoader().setPath()
+            // new THREE.MTLLoader()
+            //     .setPath( 'models/' )
+            //     .load( 'fish-2.mtl', function ( materials ) {
+            //         materials.preload();
+            //         new THREE.OBJLoader()
+            //             .setMaterials( materials )
+            //             .setPath( 'models/' )
+            //             .load( 'fish-2.obj', function ( group ) {
+            //                 mesh0 = group.children[0];
+            //                 mesh0.material.side = THREE.DoubleSide;
+            //                 mesh0.position.y = 0.25;
+            //                 mesh0.scale.set(0.25,0.25,0.25);
+            //                 markerRoot1.add(mesh0);
+            //             }, onProgress, onError );
+            //     });
+
+
+            const loader = new FBXLoader();
+            loader.load( './Assets/FBX/FBXExTest.fbx', function ( object ) {
+
+                mixer = new THREE.AnimationMixer( object );
+
+                // object.animations[ 0 ].duration=1.25;
+                // const visKF1 = new THREE.BooleanKeyframeTrack( 'pSphere2.visible', [0.375 , 0.416666 ], [ true, false ] );
+                // const visKF2 = new THREE.BooleanKeyframeTrack( 'pSphere1.visible', [0.375 , 0.416666 , 0.833333], [ false, true, false ] );
+                // const visKF3 = new THREE.BooleanKeyframeTrack( 'pSphere3.visible', [0.791666 , 0.833333 ], [ false, true ] );
+                // object.animations[ 0 ].tracks.push(visKF1)
+                // object.animations[ 0 ].tracks.push(visKF2)
+                // object.animations[ 0 ].tracks.push(visKF3)
+
+                console.log(object.animations);
+                const action = mixer.clipAction( object.animations[ 0 ] );
+                action.play();
+
+                object.traverse( function ( child ) {
+
+                    if ( child.isMesh ) {
+
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+
+                    }
+
+                } );
+                //블랜드쉐입 컨트롤 값을 찾아라
+                object.scale.x = 0.01;
+                object.scale.y = 0.01;
+                object.scale.z = 0.01;
+                 console.log(object);
+
+                eyer = object.getObjectByName('Byulsong_Byuldol_eye_R');
+                eyel = object.getObjectByName('Byulsong_Byuldol_eye_L');
+                mouth = object.getObjectByName('Byulsong_mouth');
+                eyerv = object.getObjectByName('RightEyeValue');
+                eyelv = object.getObjectByName('LeftEyeValue');
+                mouthv = object.getObjectByName('MouthValue');
+
+                eyerv.visible=false;
+                eyelv.visible=false;
+                mouthv.visible=false;
+
+                eyertx1=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/Eye_R/Eye_R_001.png");
+                eyertx2=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/Eye_R/Eye_R_002.png");
+                eyertx3=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/Eye_R/Eye_R_011.png");
+                eyeltx1=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/Eye_L/Eye_L_001.png");
+                eyeltx2=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/Eye_L/Eye_L_002.png");
+                eyeltx3=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/Eye_L/Eye_L_011.png");
+                mouthtx1=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/mouth/mouth_001.png");
+                mouthtx2=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/mouth/mouth_005.png");
+                mouthtx3=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/mouth/mouth_009.png");
+                mouthtx4=THREE.ImageUtils.loadTexture("./Assets/FBX/Tex/mouth/mouth_023.png");
+
+                console.log(eyelv.position.x);
+
+                //pom =object.getObjectByName('Pom');
+                //pom =object.getObjectByName('pSphere1');
+                //pom.visible=false;
+                //bd = object.getObjectByName('file5');
+                //pom.morphTargetDictionary['blendShape1.polySurface139']=1;
+                //console.log(pom);
+                //console.log(pom.visible);
+                //bd=object.visible;
+                //console.log(object.visible);
+                //console.log(pom.material);
+                //console.log(pom.material.alphaMap);
+                //console.log(pom.material.alphaMap.image);
+                //pom.material.alphaMap=THREE.ImageUtils.loadTexture("./mouth/mouth_002.png");
+                //pom.material.alphaMap
+                //console.log(pom.material.alphaMap);
+                //console.log(pom.material.alphaMap.image);
+                //console.log(pom.morphTargetInfluences);
+                //bd[0]=0;
+                
+                //console.log(bd);
+                //console.log(pom.morphTargetInfluences);
+                
+                markerRoot1.add( object );
+                console.log("success");
+
+            } );     
+        }
+        
+        
+        function update()
+        {
+            // update artoolkit on every frame
+            if ( arToolkitSource.ready !== false )
+                arToolkitContext.update( arToolkitSource.domElement );
+
+            if ( mixer ){
+                switch(eyerv.position.x){
+                    case 0:
+                        eyer.material.alphaMap=eyertx1;
+                        break;
+                    case 1:
+                        eyer.material.alphaMap=eyertx2;
+                        break;
+                    case 10:
+                        eyer.material.alphaMap=eyertx3;
+                        break;
+                }
+                switch(eyelv.position.x){
+                    case 0:
+                        eyel.material.alphaMap=eyeltx1;
+                        break;
+                    case 1:
+                        eyel.material.alphaMap=eyeltx2;
+                        break;
+                    case 10:
+                        eyel.material.alphaMap=eyeltx3;
+                        break;
+                }
+                switch(mouthv.position.x){
+                    case 1:
+                        mouth.material.alphaMap=mouthtx1;
+                        break;
+                    case 5:
+                        mouth.material.alphaMap=mouthtx2;
+                        break;
+                    case 9:
+                        mouth.material.alphaMap=mouthtx3;
+                        break;
+                    case 23:
+                        mouth.material.alphaMap=mouthtx4;
+                        break;
+                }
+                mixer.update( clock.getDelta() );
+            }
+        }
+        
+        
+        function render()
+        {
+            renderer.render( scene, camera );
+        }
+        
+        
+        function animate()
+        {
+            requestAnimationFrame(animate);
+            deltaTime = clock.getDelta();
+            totalTime += deltaTime;
+            update();
+            render();
+        }
+        
+        </script>
+</body>
+</html>
