@@ -144,17 +144,17 @@
             //             }, onProgress, onError );
             //     });
             const hemiLight = new THREE.HemisphereLight( 0xffffff, 0x444444 );
-            markerRoot1.add( hemiLight );
             hemiLight.position.set( 0, 2, 0 );
+            markerRoot1.add( hemiLight );
 
             const dirLight = new THREE.DirectionalLight( 0xffffff );
-            markerRoot1.add( dirLight );
             dirLight.position.set( -20, 80, 80 );
             dirLight.castShadow = true;
             dirLight.shadow.camera.top = 2;
             dirLight.shadow.camera.bottom = -2;
             dirLight.shadow.camera.left = -2;
             dirLight.shadow.camera.right = 2;
+            markerRoot1.add( dirLight );
 
             const loader = new FBXLoader();
             loader.load( './Assets/FBX/FBXExTest.fbx', function ( object ) {
