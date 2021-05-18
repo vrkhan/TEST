@@ -145,6 +145,9 @@
             //                 markerRoot1.add(mesh0);
             //             }, onProgress, onError );
             //     });
+
+            markerRoot1.add( new THREE.AmbientLight(0x404040) );
+
             const hemiLight = new THREE.HemisphereLight( 0xffffff, 0x444444 );
             hemiLight.position.set( 0, 2, 0 );
             markerRoot1.add( hemiLight );
