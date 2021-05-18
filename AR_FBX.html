@@ -52,10 +52,12 @@
                 alpha: true
             });
             renderer.setClearColor(new THREE.Color('lightgrey'), 0)
+            renderer.setPixelRatio( window.devicePixelRatio );
             renderer.setSize( 640, 480 );
-            renderer.domElement.style.position = 'absolute'
-            renderer.domElement.style.top = '0px'
-            renderer.domElement.style.left = '0px'
+            // renderer.domElement.style.position = 'absolute'
+            // renderer.domElement.style.top = '0px'
+            // renderer.domElement.style.left = '0px'
+            renderer.shadowMap.enabled = true;
             document.body.appendChild( renderer.domElement );
         
             clock = new THREE.Clock();
