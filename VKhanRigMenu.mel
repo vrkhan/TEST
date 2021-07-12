@@ -1,0 +1,1278 @@
+/* ==VKhanRigMenu==
+   Date: 2019.06.24
+   Note: Fix Maya 2019
+*/
+VKhanRigMenuProc;
+proc VKhanRigMenuProc(){
+	source "AEscriptTemplate.mel";
+	source "expressionEditor.mel";
+	source "dagMenuProc.mel";
+	source "AEfileTemplate.mel";
+	VKhanHackAEscriptTemplate;
+	VKhanHackexpressionEditor;
+	VKhanHackdagMenuProc;
+	VKhanCreateChangeSelectScript;
+}
+
+global proc VKhanHackAEscriptTemplate(){
+	string	$VKhanFile,$VKhanFileData,$VKhanFileDataList[];
+	int		$VKhanFileID,$VKhanChk;
+
+	$VKhanFile=whatIs("AEscriptTemplate.mel");
+	$VKhanFile=substitute("Script found in: ",$VKhanFile,"");
+	$VKhanFileID=`fopen $VKhanFile "r"`;
+	$VKhanFileData= `fgetword $VKhanFileID "\r\n"`;
+	while(size($VKhanFileData)>0){
+		$VKhanFileData= `fgetword $VKhanFileID "\r\n"`;
+		if(gmatch($VKhanFileData,"*global proc AE*ScriptFieldUpdate*"))$VKhanChk=1;
+		if($VKhanChk>0&&gmatch($VKhanFileData,"*textField -e -tx $script*")){
+			$VKhanFileDataList[size($VKhanFileDataList)]="string $NodeName[]=stringToStringArray($attrName,\".\");if(`attributeExists VKhanScriptProtector $NodeName[0]`){";
+			$VKhanFileDataList[size($VKhanFileDataList)]="$script=\"VKhanSkeleton Rigging System By Joong-su.Han(vkhanskel@gmail.com)\";}";
+		}
+		$VKhanFileDataList[size($VKhanFileDataList)]=$VKhanFileData;
+		if($VKhanChk>0&&gmatch($VKhanFileData,"}*"))$VKhanChk=0;
+	}
+	fclose $VKhanFileID;
+
+	eval(stringArrayToString($VKhanFileDataList,"\n"));
+}
+
+global proc VKhanHackexpressionEditor(){
+	string	$VKhanFile,$VKhanFileData,$VKhanFileDataList[];
+	int		$VKhanFileID,$VKhanChk;
+
+	$VKhanFile=whatIs("expressionEditor.mel");
+	$VKhanFile=substitute("Script found in: ",$VKhanFile,"");
+	$VKhanFileID=`fopen $VKhanFile "r"`;
+	$VKhanFileData= `fgetword $VKhanFileID "\r\n"`;
+	while(size($VKhanFileData)>0){
+		$VKhanFileData= `fgetword $VKhanFileID "\r\n"`;
+		if(gmatch($VKhanFileData,"*global proc*EEgetCurrTypeList(string $currType)*"))$VKhanChk=1;
+		$VKhanFileDataList[size($VKhanFileDataList)]=$VKhanFileData;
+		if($VKhanChk>0&&gmatch($VKhanFileData,"*ls -type script*")){
+			$VKhanFileDataList[size($VKhanFileDataList)]="int $Num;for($Num=0;$Num<size($nodeList);$Num++){";
+			$VKhanFileDataList[size($VKhanFileDataList)]="if(`attributeExists VKhanScriptProtector $nodeList[$Num]`)$nodeList[$Num]=\"VKhanSkeleton Rigging System By Joong-su．Han (vkhanskel＠gmail．com)\";}";
+		}
+		if($VKhanChk>0&&gmatch($VKhanFileData,"}*"))$VKhanChk=0;
+	}
+	fclose $VKhanFileID;
+	eval(stringArrayToString($VKhanFileDataList,"\n"));
+}
+
+global proc VKhanHackdagMenuProc(){
+	string	$VKhanFile,$VKhanFileData,$VKhanFileDataList[];
+	int		$VKhanFileID,$VKhanChk,$versionChk;
+
+	source "dagMenuProc.mel";
+	$versionChk=`about -v`;
+	if ($versionChk>2016 && $versionChk<2019)
+	{
+    	buildObjectMenuItemsNow "MainPane|viewPanes|modelPanel4|modelPanel4|modelPanel4|modelPanel4ObjectPop";
+    	dagMenuProc("MainPane|viewPanes|modelPanel4|modelPanel4|modelPanel4|modelPanel4ObjectPop", "persp");
+	}
+	else if ($versionChk>=2019)
+	{
+        buildObjectMenuItemsNow "MainPane|viewPanes|modelPanel4|modelPanel4|modelEditorTabLayout|modelPanel4|modelPanel4ObjectPop";
+        dagMenuProc("MainPane|viewPanes|modelPanel4|modelPanel4|modelEditorTabLayout|modelPanel4|modelPanel4ObjectPop", "persp");
+	}
+	$VKhanFile=whatIs("dagMenuProc.mel");
+	$VKhanFile=substitute("Script found in: ",$VKhanFile,"");
+	$VKhanFileID=`fopen $VKhanFile "r"`;
+	$VKhanFileData= `fgetword $VKhanFileID "\r\n"`;
+	while(size($VKhanFileData)>0){
+		$VKhanFileData= `fgetword $VKhanFileID "\r\n"`;
+		if(gmatch($VKhanFileData,"*proc optionalDagMenuProc*"))$VKhanChk=1;
+		if(gmatch($VKhanFileData,"*global proc dagMenuProc*"))$VKhanChk=2;
+
+
+		if($versionChk<2019)
+		{
+    		if($VKhanChk==2&&gmatch($VKhanFileData,"*global string $artSelectObject*"))
+    		{
+    			$VKhanFileDataList[size($VKhanFileDataList)]="if(attributeExists(\"VKhanRigMenuItem\",$object)){VKhanRigMenu($parent, $object);}else{";
+    		}
+		}
+		else
+		{
+    		if($VKhanChk==2&&gmatch($VKhanFileData,"*global string $gArtSelectObject*"))
+    		{
+    			$VKhanFileDataList[size($VKhanFileDataList)]="if(attributeExists(\"VKhanRigMenuItem\",$object)){VKhanRigMenu($parent, $object);}else{";
+    		}
+		}
+		if($VKhanChk==2&&gmatch($VKhanFileData,"*menuItem -label (uiRes(\"m_dagMenuProc.kSelect\"))*")){
+			$VKhanFileDataList[size($VKhanFileDataList)]="menuItem -l \"Toggle Frame Counter\" -c VKhanFrameCounter;menuItem -d 1;";
+			$VKhanFileDataList[size($VKhanFileDataList)]="menuItem -l \"Display Layer from Selected\" -c \"VKhanCreateLayer 0;\";menuItem -d 1;";
+			$VKhanFileDataList[size($VKhanFileDataList)]="menuItem -l \"Render Layer from Selected\" -c \"VKhanCreateLayer 1;\";menuItem -d 1;";
+		}
+		if($VKhanChk==2&&gmatch($VKhanFileData,"}")){
+			$VKhanFileDataList[size($VKhanFileDataList)]="}";
+		}
+		$VKhanFileDataList[size($VKhanFileDataList)]=$VKhanFileData;
+		if($VKhanChk>0&&gmatch($VKhanFileData,"}*"))$VKhanChk=0;
+	}
+	fclose $VKhanFileID;
+
+	eval(stringArrayToString($VKhanFileDataList,"\n"));
+}
+
+global proc VKhanRigMenu(string $parent, string $VKhanCtrl) {
+	string	$VKhanCtrlName = `substitute ".*|" $VKhanCtrl ""`,$VKhanRigMenuList[],$VKhanRigSubMenuList[],$VKhanOrder,$VKhanRigSubMenu,$VKhanMirrorMenu[],
+			$VKhanMenuPosition[]={"SW","W","NW","N","NE","E","SE","S"},$VKhanScript[],$VKhanCrtScript,$VKhanNS[],$VKhanAddScriptList[];
+	int		$VKhanArray,$VKhanChk=1,$VKhanOrderList[];
+
+	$VKhanRigSubMenuList=`listConnections ($VKhanCtrl+".VKhanRigMenuItem[0]")`;
+	$VKhanRigMenuList[0]=$VKhanRigSubMenuList[0];
+	$VKhanRigSubMenuList=`listConnections ($VKhanCtrl+".VKhanRigMenuItem[1]")`;
+	$VKhanRigMenuList[1]=$VKhanRigSubMenuList[0];
+	$VKhanRigSubMenuList=`listConnections ($VKhanCtrl+".VKhanRigMenuItem[2]")`;
+	$VKhanRigMenuList[2]=$VKhanRigSubMenuList[0];
+	if(size($VKhanRigMenuList[0])){
+		$VKhanRigSubMenuList=`listConnections ($VKhanRigMenuList[0]+".id")`;
+		$VKhanRigMenuList[3]=$VKhanRigSubMenuList[0];
+	}
+	setParent -m $parent;
+	menuItem -bld 1 -l $VKhanCtrlName -c ("showEditor "+(`longNameOf $VKhanCtrl`));
+	menuItem -d 1;
+	menuItem -d 1;
+
+    string $container = `container -q -findContainer { $VKhanCtrl }`;
+
+    if (size($container) > 0){
+	    string $menuProc = `getAttr ($container+".rmbCommand")`;
+	    if (size($menuProc) > 0){
+		    if (`exists $menuProc`){
+			    string $menuItems[] = `eval $menuProc`;
+			    int $mm;
+			    int $menuCount = size($menuItems);
+			    if ($menuCount % 2 != 0){
+				    $menuCount--;
+			    }
+			    if ($menuCount > 0){
+				    string $containerType = `getAttr ($container + ".containerType")`;
+				    if ($containerType == ""){
+					    menuItem -d true;
+					    menuItem - subMenu true -label (uiRes("m_dagMenuProc.kCustom"));
+				    }else{
+					    menuItem -d true;
+					    menuItem -subMenu true -label ($containerType);
+				    }
+				    for ($mm = 0; $mm < $menuCount; $mm+=2){
+					    menuItem -label $menuItems[$mm] -c ($menuItems[$mm+1]+" "+$VKhanCtrl);
+				    }
+			    }
+		    }
+	    }
+    }
+    setParent -m $parent;
+
+	menuItem -d 1;
+
+	menuItem -l "Toggle Frame Counter" -c VKhanFrameCounter;
+
+	menuItem -d 1;
+
+	menuItem -l "Display Layer from Selected" -c "VKhanCreateLayer 0;";
+
+	$VKhanScript=`ls -typ script`;
+	for($VKhanCrtScript in $VKhanScript){
+		if(attributeExists("VKhanScriptProtector",$VKhanCrtScript)&&attributeExists("VKhanAddScript",$VKhanCrtScript)){
+			if($VKhanChk){
+				menuItem -d 1;
+				menuItem -sm 1 -l "Additional Menu";
+				$VKhanChk=0;
+			}
+			$VKhanNS=stringToStringArray($VKhanCrtScript,":");
+			$VKhanAddScriptList[size($VKhanAddScriptList)]=$VKhanNS[size($VKhanNS)-1];
+		}
+	}
+	$VKhanScript=stringArrayRemoveDuplicates($VKhanAddScriptList);
+	for($VKhanCrtScript in $VKhanScript){
+		menuItem -l (substituteAllString($VKhanCrtScript,"_"," ")) -c $VKhanCrtScript;
+	};
+	if($VKhanChk==0)setParent -m $parent;
+
+	if(size($VKhanRigMenuList[0])){
+		menuItem -d 1;
+		menuItem -sm 1 -l "Controler Visibility";
+				menuItem -l "On" -c ("VKhanPoseSet "+$VKhanRigMenuList[0]+" All 5");
+				menuItem -l "Off" -c ("VKhanPoseSet "+$VKhanRigMenuList[0]+" All 6");
+		setParent -m $parent;
+	};
+
+	if(size(`ls -typ hairSystem`)||size($VKhanRigMenuList[2])){
+		menuItem -d 1;
+		menuItem -sm 1 -l "Hair Bake Simulation";
+			if(size(`ls -typ hairSystem`)){
+			menuItem -sm 1 -l "for All Character";
+				menuItem -l "Bake Simulation" -c ("VKhanAllHairBakeCmd 1");
+				menuItem -l "Remove Bake Key" -c ("VKhanAllHairBakeCmd 0");
+			};
+			if(size($VKhanRigMenuList[2])){
+			setParent -m ..;
+			menuItem -sm 1 -l "for Each Character";
+				menuItem -l "Bake Simulation" -c ("VKhanHairBakeCmd "+$VKhanRigMenuList[2]+" 1");
+				menuItem -l "Remove Bake Key" -c ("VKhanHairBakeCmd "+$VKhanRigMenuList[2]+" 0");
+				menuItem -l "Select Bake Point" -c ("VKhanHairBakeCmd "+$VKhanRigMenuList[2]+" 2");
+			};
+		setParent -m $parent;
+	};
+
+	menuItem -d 1;
+
+	if(size($VKhanRigMenuList[0])){
+		menuItem -sm 1 -l "Select";
+			$VKhanRigSubMenuList=`listAttr -ud $VKhanRigMenuList[0]`;
+			if(size($VKhanRigMenuList[3])&&attributeExists("Order",$VKhanRigMenuList[3])){
+				$VKhanOrderList=`getAttr -mi ($VKhanRigMenuList[3]+".Order")`;
+				for($VKhanOrder in $VKhanOrderList){
+					$VKhanArray=$VKhanOrder;
+					$VKhanRigSubMenu=`getAttr ($VKhanRigMenuList[3]+".Order["+$VKhanOrder+"]")`;
+					if(stringArrayContains($VKhanRigSubMenu,$VKhanRigSubMenuList)){
+						$VKhanMirrorMenu[$VKhanArray]=$VKhanRigSubMenu;
+					}
+				}
+				$VKhanMirrorMenu=stringArrayRemoveDuplicates($VKhanMirrorMenu);
+				$VKhanScript=stringArrayRemove($VKhanMirrorMenu,$VKhanRigSubMenuList);
+				$VKhanChk=0;
+				for($VKhanArray=0;$VKhanArray<size($VKhanRigSubMenuList);$VKhanArray++){
+					if(!size($VKhanMirrorMenu[$VKhanArray])){
+						$VKhanMirrorMenu[$VKhanArray]=$VKhanScript[$VKhanChk];
+						$VKhanChk++;
+					}
+				}
+				$VKhanRigSubMenuList=$VKhanMirrorMenu;
+				clear $VKhanMirrorMenu;
+			}
+			menuItem -l $VKhanCtrlName -c ("select -r "+$VKhanCtrl);
+			menuItem -d 1;
+			$VKhanArray=0;
+			for($VKhanRigSubMenu in $VKhanRigSubMenuList){
+				if(size($VKhanRigSubMenu)){
+					menuItem -l $VKhanRigSubMenu -c ("VKhanPoseSet "+$VKhanRigMenuList[0]+" "+$VKhanRigSubMenu+" 0");
+				};
+				if(`gmatch $VKhanRigSubMenu "*Arm*"`)	$VKhanMirrorMenu[size($VKhanMirrorMenu)]="Arms";
+				else if(`gmatch $VKhanRigSubMenu "*Finger*"`)	$VKhanMirrorMenu[size($VKhanMirrorMenu)]="Fingers";
+				else if(`gmatch $VKhanRigSubMenu "*Leg*"`)	$VKhanMirrorMenu[size($VKhanMirrorMenu)]="Legs";
+				else if(`gmatch $VKhanRigSubMenu "*Toe*"`)	$VKhanMirrorMenu[size($VKhanMirrorMenu)]="Toes";
+				else	$VKhanMirrorMenu[size($VKhanMirrorMenu)]=$VKhanRigSubMenu;
+				$VKhanMirrorMenu=stringArrayRemoveDuplicates($VKhanMirrorMenu);
+			};
+		setParent -m $parent;
+		menuItem -aob 1 -sm 1 -l "Key";
+			menuItem -sm 1 -l "Set Key";
+				menuItem -l $VKhanCtrlName -c ("setKeyframe "+$VKhanCtrl);
+				menuItem -d 1;
+				menuItem -l "Selected" -c ("VKhanPoseSet "+$VKhanRigMenuList[0]+" Selected 1");
+				menuItem -d 1;
+				for($VKhanRigSubMenu in $VKhanRigSubMenuList){
+					if(size($VKhanRigSubMenu)){
+						menuItem -l $VKhanRigSubMenu -c ("VKhanPoseSet "+$VKhanRigMenuList[0]+" "+$VKhanRigSubMenu+" 1");
+					};
+				};
+			setParent -m ..;
+			menuItem -sm 1 -l "Copy Key";
+				menuItem -l $VKhanCtrlName -c ("copyKey "+$VKhanCtrl+";if(\`optionVar -exists \"VKhanCopyKeyPart\"\`){optionVar -remove \"VKhanCopyKeyPart\";};optionVar -sv \"VKhanCopyKeyPart\" "
+					+$VKhanCtrl+";if(\`optionVar -exists \"VKhanCopyKeyFrame\"\`){optionVar -remove \"VKhanCopyKeyFrame\";};optionVar -fv \"VKhanCopyKeyFrame\" \`currentTime -q\`;");
+				menuItem -d 1;
+				menuItem -l "Selected" -c ("VKhanPoseSet "+$VKhanRigMenuList[0]+" Selected 2");
+				menuItem -d 1;
+				for($VKhanRigSubMenu in $VKhanRigSubMenuList){
+					if(size($VKhanRigSubMenu)){
+						menuItem -l $VKhanRigSubMenu -c ("VKhanPoseSet "+$VKhanRigMenuList[0]+" "+$VKhanRigSubMenu+" 2");
+					};
+				};
+			setParent -m ..;
+			menuItem -l "Paste Key" -c ("VKhanPoseSet "+$VKhanRigMenuList[0]+" "+(`optionVar -q "VKhanCopyKeyPart"`)+" 3");
+		setParent -m $parent;
+		menuItem -aob 1 -sm 1 -l "Pose";
+			menuItem -sm 1 -l "Bind Pose";
+				menuItem -l $VKhanCtrlName -c ("VKhanSetBindPose "+$VKhanCtrl);
+				menuItem -d 1;
+				menuItem -l "Selected" -c ("VKhanPoseSet "+$VKhanRigMenuList[0]+" Selected 4");
+				menuItem -d 1;
+				for($VKhanRigSubMenu in $VKhanRigSubMenuList){
+					if(size($VKhanRigSubMenu)){
+						menuItem -l $VKhanRigSubMenu -c ("VKhanPoseSet "+$VKhanRigMenuList[0]+" "+$VKhanRigSubMenu+" 4");
+					};
+				};
+			setParent -m ..;
+			menuItem -d 1;
+			menuItem -sm 1 -l "Flip";
+				menuItem -l $VKhanCtrlName -c ("VKhanSetMirrorPose "+$VKhanCtrl+" 1");
+				menuItem -d 1;
+				menuItem -l "Selected" -c ("VKhanMirrorSet "+$VKhanRigMenuList[0]+" Selected 1");
+				menuItem -d 1;
+				for($VKhanRigSubMenu in $VKhanMirrorMenu){
+					if(size($VKhanRigSubMenu)){
+						menuItem -l $VKhanRigSubMenu -c ("VKhanMirrorSet "+$VKhanRigMenuList[0]+" "+$VKhanRigSubMenu+" 1");
+					};
+				};
+			setParent -m ..;
+			menuItem -sm 1 -l "Mirror->";
+				if(!`attributeExists "MirrorLeft" $VKhanCtrl`){
+					menuItem -l $VKhanCtrlName -c ("VKhanSetMirrorPose "+$VKhanCtrl+" 2");
+				};
+				menuItem -d 1;
+				menuItem -l "Selected" -c ("VKhanMirrorSet "+$VKhanRigMenuList[0]+" Selected 2");
+				menuItem -d 1;
+				for($VKhanRigSubMenu in $VKhanMirrorMenu){
+					if(size($VKhanRigSubMenu)){
+						menuItem -l $VKhanRigSubMenu -c ("VKhanMirrorSet "+$VKhanRigMenuList[0]+" "+$VKhanRigSubMenu+" 2");
+					};
+				};
+			setParent -m ..;
+			menuItem -sm 1 -l "<-Mirror";
+				if(!`attributeExists "MirrorRight" $VKhanCtrl`){
+					menuItem -l $VKhanCtrlName -c ("VKhanSetMirrorPose "+$VKhanCtrl+" 3");
+				};
+				menuItem -d 1;
+				menuItem -l "Selected" -c ("VKhanMirrorSet "+$VKhanRigMenuList[0]+" Selected 3");
+				menuItem -d 1;
+				for($VKhanRigSubMenu in $VKhanMirrorMenu){
+					if(size($VKhanRigSubMenu)){
+						menuItem -l $VKhanRigSubMenu -c ("VKhanMirrorSet "+$VKhanRigMenuList[0]+" "+$VKhanRigSubMenu+" 3");
+					};
+				};
+		setParent -m $parent;
+	};
+
+	if(size($VKhanRigMenuList[1])){
+		$VKhanRigSubMenu=`connectionInfo -sfd ($VKhanRigMenuList[1]+".IKFKAttr")`;
+		if(`getAttr $VKhanRigSubMenu`<0.5){
+			menuItem -l "Go To FK" -rp $VKhanMenuPosition[2] -c ("VKhanIKFKAttrTimeShiftKey "+$VKhanRigMenuList[1]+" 1");
+		}else{
+			menuItem -l "Go To IK" -rp $VKhanMenuPosition[2] -c ("VKhanIKFKAttrTimeShiftKey "+$VKhanRigMenuList[1]+" 0");
+		};
+	};
+	if(attributeExists("Follow",$VKhanCtrl)) {
+		$VKhanRigSubMenuList=stringToStringArray(`addAttr -q -en ($VKhanCtrl+".Follow")`,":");
+		$VKhanArray=0;
+		$VKhanArray=8-size($VKhanRigSubMenuList);
+		for($VKhanRigSubMenu in $VKhanRigSubMenuList){
+			menuItem -l ("Follow "+$VKhanRigSubMenu) -rp $VKhanMenuPosition[$VKhanArray] -c ("VKhanFollow "+$VKhanCtrl+" "+($VKhanArray-8+size($VKhanRigSubMenuList)));
+			$VKhanArray++;
+		};
+	};
+};
+
+global proc VKhanIKFKSwitch (string $VkhanNode,int $VKhanIKFKValue){
+	string	$VKhanIKFKAttr=`connectionInfo -sfd ($VkhanNode+".IKFKAttr")`,$VKhanSwitchTarget[]=`listConnections ($VkhanNode+".Target")`,$VKhanIKCtrlUserAttr[],$VKhanIKCtrlCrtAttr,
+			$VKhanIKCtrl[]=`listConnections ($VkhanNode+".IKCtrlList")`,$VKhanIKCtrlAttr[],$VKhanFKCtrl[]=`listConnections ($VkhanNode+".FKCtrlList")`;
+	vector	$VKhanTranslateValue[],$VKhanCenterValue[],$VKhanRotateValue[],$VKhanVectorValue;
+	float	$VKhanOriLength[],$VKhanCrtLength[],$VKhanTwistAngle,$VKhanGetValue;
+	int	$VKhanArray,$VKhanSubArray,$VKhanTwistReverse;
+	if($VKhanIKFKValue){
+		for($VKhanArray=0;$VKhanArray<3;){
+			$VKhanTranslateValue[$VKhanArray]=`xform -q -ws -rp $VKhanSwitchTarget[$VKhanArray]`;
+			$VKhanCenterValue[$VKhanArray]=`xform -q -os -rp $VKhanSwitchTarget[$VKhanArray]`;
+			$VKhanRotateValue[$VKhanArray]=`xform -q -ws -ro $VKhanSwitchTarget[$VKhanArray]`;
+			if(!`getAttr -l ($VKhanFKCtrl[$VKhanArray]+".sx")`&&!`getAttr -l ($VKhanFKCtrl[$VKhanArray]+".sy")`&&!`getAttr -l ($VKhanFKCtrl[$VKhanArray]+".sz")`){
+				setAttr ($VKhanFKCtrl[$VKhanArray]+".s") 1 1 1;
+			};
+			$VKhanArray++;
+		};
+		for($VKhanArray=3;$VKhanArray<size($VKhanFKCtrl);){
+			if(size($VKhanFKCtrl[$VKhanArray])&&size($VKhanSwitchTarget[$VKhanArray+1])){
+				$VKhanTranslateValue[$VKhanArray]=`xform -q -ws -rp $VKhanSwitchTarget[$VKhanArray+1]`;
+				$VKhanCenterValue[$VKhanArray]=`xform -q -os -rp $VKhanSwitchTarget[$VKhanArray+1]`;
+				$VKhanRotateValue[$VKhanArray]=`xform -q -ws -ro $VKhanSwitchTarget[$VKhanArray+1]`;
+				if(!`getAttr -l ($VKhanFKCtrl[$VKhanArray]+".sx")`&&!`getAttr -l ($VKhanFKCtrl[$VKhanArray]+".sy")`&&!`getAttr -l ($VKhanFKCtrl[$VKhanArray]+".sz")`){
+					setAttr ($VKhanFKCtrl[$VKhanArray]+".s") 1 1 1;
+				};
+			};
+			$VKhanArray++;
+		};
+		setAttr $VKhanIKFKAttr $VKhanIKFKValue;
+		for($VKhanArray=0;$VKhanArray<3;){
+			$VKhanVectorValue=$VKhanTranslateValue[$VKhanArray];
+			xform -ws -t ($VKhanVectorValue.x) ($VKhanVectorValue.y) ($VKhanVectorValue.z) $VKhanFKCtrl[$VKhanArray];
+			$VKhanTranslateValue[$VKhanArray]=`getAttr ($VKhanFKCtrl[$VKhanArray]+".t")`;
+			$VKhanTranslateValue[$VKhanArray]-=$VKhanCenterValue[$VKhanArray];
+			$VKhanVectorValue=$VKhanTranslateValue[$VKhanArray];
+			setAttr ($VKhanFKCtrl[$VKhanArray]+".t") ($VKhanVectorValue.x) ($VKhanVectorValue.y) ($VKhanVectorValue.z);
+			$VKhanVectorValue=$VKhanRotateValue[$VKhanArray];
+			xform -ws  -ro ($VKhanVectorValue.x) ($VKhanVectorValue.y) ($VKhanVectorValue.z) $VKhanFKCtrl[$VKhanArray];
+			$VKhanArray++;
+		};
+		for($VKhanArray=3;$VKhanArray<size($VKhanFKCtrl);){
+			if(size($VKhanFKCtrl[$VKhanArray])&&size($VKhanSwitchTarget[$VKhanArray+1])){
+				if(!`getAttr -l ($VKhanFKCtrl[$VKhanArray]+".tx")`&&!`getAttr -l ($VKhanFKCtrl[$VKhanArray]+".ty")`&&!`getAttr -l ($VKhanFKCtrl[$VKhanArray]+".tz")`){
+
+					$VKhanVectorValue=$VKhanTranslateValue[$VKhanArray];
+					xform -ws -t ($VKhanVectorValue.x) ($VKhanVectorValue.y) ($VKhanVectorValue.z) $VKhanFKCtrl[$VKhanArray];
+					$VKhanTranslateValue[$VKhanArray]=`getAttr ($VKhanFKCtrl[$VKhanArray]+".t")`;
+					$VKhanTranslateValue[$VKhanArray]-=$VKhanCenterValue[$VKhanArray];
+					$VKhanVectorValue=$VKhanTranslateValue[$VKhanArray];
+					setAttr ($VKhanFKCtrl[$VKhanArray]+".t") ($VKhanVectorValue.x) ($VKhanVectorValue.y) ($VKhanVectorValue.z);
+				};
+				if(!`getAttr -l ($VKhanFKCtrl[$VKhanArray]+".rx")`&&!`getAttr -l ($VKhanFKCtrl[$VKhanArray]+".ry")`&&!`getAttr -l ($VKhanFKCtrl[$VKhanArray]+".rz")`){
+					$VKhanVectorValue=$VKhanRotateValue[$VKhanArray];
+					xform -ws  -ro ($VKhanVectorValue.x) ($VKhanVectorValue.y) ($VKhanVectorValue.z) $VKhanFKCtrl[$VKhanArray];
+				};
+			};
+			$VKhanArray++;
+		};
+	}else{
+		if(`getAttr ($VkhanNode+".TwistReverse")`){
+			$VKhanTwistReverse=-1;
+		}else{
+			$VKhanTwistReverse=1;
+		};
+		for($VKhanArray=0;$VKhanArray<size($VKhanIKCtrl);){
+			$VKhanIKCtrlAttr[$VKhanArray]=`connectionInfo -sfd ($VkhanNode+".IKCtrlList["+$VKhanArray+"]")`;
+			$VKhanArray++;
+		};
+		$VKhanIKCtrlUserAttr=`listAttr -ud -k $VKhanIKCtrl[0]`;
+		$VKhanIKCtrlUserAttr=stringArrayRemove({"Squash","Follow"},$VKhanIKCtrlUserAttr);
+		for($VKhanIKCtrlCrtAttr in $VKhanIKCtrlUserAttr){
+			setAttr ($VKhanIKCtrl[0]+"."+$VKhanIKCtrlCrtAttr) 0;
+		};
+		for($VKhanArray=4;$VKhanArray<size($VKhanIKCtrl);){
+			if(size($VKhanIKCtrlAttr[$VKhanArray])&&size($VKhanIKCtrlAttr[$VKhanArray+1])&&size($VKhanIKCtrlAttr[$VKhanArray+2])){
+				$VKhanGetValue=`getAttr $VKhanIKCtrlAttr[$VKhanArray+1]`;
+				$VKhanGetValue*=`getAttr $VKhanIKCtrlAttr[$VKhanArray+2]`;
+				if(!`getAttr -l $VKhanIKCtrlAttr[$VKhanArray+1]`&&`getAttr -k $VKhanIKCtrlAttr[$VKhanArray+1]`){
+					setAttr $VKhanIKCtrlAttr[$VKhanArray+1] 0;
+				}
+				if(!`getAttr -l $VKhanIKCtrlAttr[$VKhanArray+2]`&&`getAttr -k $VKhanIKCtrlAttr[$VKhanArray+2]`){
+					setAttr $VKhanIKCtrlAttr[$VKhanArray+2] 0;
+				};
+				setAttr $VKhanIKCtrlAttr[$VKhanArray] $VKhanGetValue;
+			};
+			$VKhanArray+=3;
+		};
+
+		$VKhanTranslateValue[0]=`xform -q -ws -rp $VKhanSwitchTarget[1]`;
+		$VKhanTranslateValue[1]=`xform -q -ws -rp $VKhanSwitchTarget[0]`;
+		$VKhanTranslateValue[0]-=$VKhanTranslateValue[1];
+		$VKhanCrtLength[0]=`mag $VKhanTranslateValue[0]`;
+		$VKhanTranslateValue[1]=`xform -q -ws -rp $VKhanSwitchTarget[3]`;
+		$VKhanTranslateValue[2]=`xform -q -ws -rp $VKhanSwitchTarget[1]`;
+		$VKhanTranslateValue[1]-=$VKhanTranslateValue[2];
+		$VKhanCrtLength[1]=`mag $VKhanTranslateValue[1]`;
+		$VKhanTranslateValue[2]=`xform -q -ws -rp $VKhanSwitchTarget[0]`;
+		$VKhanTranslateValue[3]=`xform -q -ws -rp $VKhanSwitchTarget[1]`;
+		$VKhanTranslateValue[2]-=$VKhanTranslateValue[3];
+		$VKhanTranslateValue[3]=`xform -q -ws -rp $VKhanSwitchTarget[3]`;
+		$VKhanCenterValue[0]=`xform -q -os -rp $VKhanSwitchTarget[3]`;
+		$VKhanRotateValue[0]=`xform -q -ws -ro $VKhanSwitchTarget[3]`;
+		$VKhanVectorValue=$VKhanTranslateValue[3];
+		xform -ws -t ($VKhanVectorValue.x) ($VKhanVectorValue.y) ($VKhanVectorValue.z) $VKhanIKCtrl[0];
+		$VKhanTranslateValue[3]=`getAttr ($VKhanIKCtrl[0]+".t")`;
+		$VKhanTranslateValue[3]-=$VKhanCenterValue[0];
+		$VKhanVectorValue=$VKhanTranslateValue[3];
+		setAttr ($VKhanIKCtrl[0]+".t") ($VKhanVectorValue.x) ($VKhanVectorValue.y) ($VKhanVectorValue.z);
+		$VKhanVectorValue=$VKhanRotateValue[0];
+		xform -ws  -ro ($VKhanVectorValue.x) ($VKhanVectorValue.y) ($VKhanVectorValue.z) $VKhanIKCtrl[0];
+		setAttr $VKhanIKFKAttr $VKhanIKFKValue;
+
+		$VKhanTranslateValue[4]=`xform -q -ws -rp $VKhanSwitchTarget[1]`;
+		$VKhanTranslateValue[5]=`xform -q -ws -rp $VKhanSwitchTarget[0]`;
+		$VKhanTranslateValue[4]-=$VKhanTranslateValue[5];
+		$VKhanOriLength[0]=`mag $VKhanTranslateValue[4]`;
+		$VKhanTranslateValue[5]=`xform -q -ws -rp $VKhanSwitchTarget[3]`;
+		$VKhanTranslateValue[6]=`xform -q -ws -rp $VKhanSwitchTarget[1]`;
+		$VKhanTranslateValue[5]-=$VKhanTranslateValue[6];
+		$VKhanOriLength[1]=`mag $VKhanTranslateValue[5]`;
+
+		setAttr $VKhanIKCtrlAttr[2] ((($VKhanCrtLength[0]/$VKhanOriLength[0])-1)*10);
+		setAttr $VKhanIKCtrlAttr[3] ((($VKhanCrtLength[1]/$VKhanOriLength[1])-1)*10);
+		$VKhanTranslateValue[6]=`xform -q -ws -rp $VKhanSwitchTarget[1]`;
+		$VKhanTranslateValue[7]=`xform -q -ws -rp $VKhanSwitchTarget[0]`;
+		$VKhanTranslateValue[6]-=$VKhanTranslateValue[7];
+		$VKhanTranslateValue[7]=`xform -q -ws -rp $VKhanSwitchTarget[3]`;
+		$VKhanTranslateValue[8]=`xform -q -ws -rp $VKhanSwitchTarget[1]`;
+		$VKhanTranslateValue[7]-=$VKhanTranslateValue[8];
+		$VKhanRotateValue[0]=cross($VKhanTranslateValue[0],$VKhanTranslateValue[1]);
+		$VKhanRotateValue[1]=cross($VKhanTranslateValue[6],$VKhanTranslateValue[7]);
+		$VKhanTwistAngle=rad_to_deg(`angle $VKhanRotateValue[0] $VKhanRotateValue[1]`);
+
+		$VKhanCenterValue[0]=$VKhanTranslateValue[1]+$VKhanTranslateValue[2];
+
+		if(dotProduct($VKhanRotateValue[1],$VKhanCenterValue[0],1)>0){
+			setAttr $VKhanIKCtrlAttr[0] ($VKhanTwistAngle*$VKhanTwistReverse);
+		}else{
+			setAttr $VKhanIKCtrlAttr[0] ((-$VKhanTwistAngle)*$VKhanTwistReverse);
+		};
+	};
+};
+
+global proc VKhanIKFKAttrTimeShiftKey(string $VkhanNode,int $VKhanIKFKValue){
+	string	$VKhanIKFKAttr=`connectionInfo -sfd ($VkhanNode+".IKFKAttr")`,$VKhanIKCtrl[]=`listConnections ($VkhanNode+".IKCtrlList")`,$VKhanIKCtrlAttr[],$VKhanFKCtrl[]=`listConnections ($VkhanNode+".FKCtrlList")`;
+    float   $VKhanKeyFrame=`currentTime -q`,$VKhanFindKeyFrame[],$VKhanPreviousKeyFrame;
+	int		$VKhanArray,$VKhanSubArray,$VKhanKeyFrameChk=0;
+
+	if($VKhanIKFKValue){
+		for($VKhanArray=0;$VKhanArray<size($VKhanIKCtrl);){
+			$VKhanIKCtrlAttr[$VKhanArray]=`connectionInfo -sfd ($VkhanNode+".IKCtrlList["+$VKhanArray+"]")`;
+			$VKhanArray++;
+		};
+        if(`keyframe -q -kc ($VKhanIKCtrl[0]+".tx")`){
+            $VKhanFindKeyFrame[0]=`findKeyframe -t $VKhanKeyFrame -w previous ($VKhanIKCtrl[0]+".tx")`;
+            $VKhanKeyFrameChk=1;
+        };
+        if(`keyframe -q -kc ($VKhanIKCtrl[0]+".ty")`){
+            $VKhanFindKeyFrame[1]=`findKeyframe -t $VKhanKeyFrame -w previous ($VKhanIKCtrl[0]+".ty")`;
+            $VKhanKeyFrameChk=1;
+        };
+        if(`keyframe -q -kc ($VKhanIKCtrl[0]+".tz")`){
+            $VKhanFindKeyFrame[1]=`findKeyframe -t $VKhanKeyFrame -w previous ($VKhanIKCtrl[0]+".tz")`;
+            $VKhanKeyFrameChk=1;
+        };
+        if(`keyframe -q -kc ($VKhanIKCtrl[0]+".rx")`){
+            $VKhanFindKeyFrame[1]=`findKeyframe -t $VKhanKeyFrame -w previous ($VKhanIKCtrl[0]+".rx")`;
+            $VKhanKeyFrameChk=1;
+        };
+        if(`keyframe -q -kc ($VKhanIKCtrl[0]+".ry")`){
+            $VKhanFindKeyFrame[1]=`findKeyframe -t $VKhanKeyFrame -w previous ($VKhanIKCtrl[0]+".ry")`;
+            $VKhanKeyFrameChk=1;
+        };
+        if(`keyframe -q -kc ($VKhanIKCtrl[0]+".rz")`){
+            $VKhanFindKeyFrame[1]=`findKeyframe -t $VKhanKeyFrame -w previous ($VKhanIKCtrl[0]+".rz")`;
+            $VKhanKeyFrameChk=1;
+        };
+        if(`keyframe -q -kc $VKhanIKCtrlAttr[0]`){
+            $VKhanFindKeyFrame[6]=`findKeyframe -t $VKhanKeyFrame -w previous $VKhanIKCtrlAttr[0]`;
+            $VKhanKeyFrameChk=1;
+        };
+        if(`keyframe -q -kc $VKhanIKCtrlAttr[1]`){
+            $VKhanFindKeyFrame[7]=`findKeyframe -t $VKhanKeyFrame -w previous $VKhanIKCtrlAttr[1]`;
+            $VKhanKeyFrameChk=1;
+        };
+        if(`keyframe -q -kc $VKhanIKCtrlAttr[2]`){
+            $VKhanFindKeyFrame[8]=`findKeyframe -t $VKhanKeyFrame -w previous $VKhanIKCtrlAttr[2]`;
+            $VKhanKeyFrameChk=1;
+        };
+        if(`keyframe -q -kc $VKhanIKCtrlAttr[3]`){
+            $VKhanFindKeyFrame[9]=`findKeyframe -t $VKhanKeyFrame -w previous $VKhanIKCtrlAttr[3]`;
+            $VKhanKeyFrameChk=1;
+        };
+        $VKhanPreviousKeyFrame=$VKhanFindKeyFrame[0];
+		for($VKhanArray=1;$VKhanArray<10;){
+		    if($VKhanPreviousKeyFrame<$VKhanFindKeyFrame[$VKhanArray])$VKhanPreviousKeyFrame=$VKhanFindKeyFrame[$VKhanArray];
+			$VKhanArray++;
+		};
+		if($VKhanKeyFrameChk){
+			setKeyframe $VKhanIKFKAttr;
+			currentTime $VKhanPreviousKeyFrame -u 1;
+			if(`getAttr $VKhanIKFKAttr`>0.5){
+				VKhanIKFKSwitch $VkhanNode 0;
+				setAttr $VKhanIKFKAttr 1;
+			}else{
+				VKhanIKFKSwitch $VkhanNode 1;
+				setAttr $VKhanIKFKAttr 0;
+			};
+			currentTime $VKhanKeyFrame -u 1;
+		};
+		VKhanIKFKSwitch $VkhanNode 1;
+	}else{
+		for($VKhanArray=0;$VKhanArray<3;){
+			if(`keyframe -q -kc ($VKhanFKCtrl[$VKhanArray]+".tx")`){
+			    $VKhanFindKeyFrame[($VKhanArray*7)]=`findKeyframe -t $VKhanKeyFrame -w previous ($VKhanFKCtrl[$VKhanArray]+".tx")`;
+			    $VKhanKeyFrameChk=1;
+			};
+			if(`keyframe -q -kc ($VKhanFKCtrl[$VKhanArray]+".ty")`){
+			    $VKhanFindKeyFrame[($VKhanArray*7)+1]=`findKeyframe -t $VKhanKeyFrame -w previous ($VKhanFKCtrl[$VKhanArray]+".ty")`;
+			    $VKhanKeyFrameChk=1;
+			};
+			if(`keyframe -q -kc ($VKhanFKCtrl[$VKhanArray]+".tz")`){
+			    $VKhanFindKeyFrame[($VKhanArray*7)+2]=`findKeyframe -t $VKhanKeyFrame -w previous ($VKhanFKCtrl[$VKhanArray]+".tz")`;
+			    $VKhanKeyFrameChk=1;
+			};
+			if(`keyframe -q -kc ($VKhanFKCtrl[$VKhanArray]+".rx")`){
+			    $VKhanFindKeyFrame[($VKhanArray*7)+3]=`findKeyframe -t $VKhanKeyFrame -w previous ($VKhanFKCtrl[$VKhanArray]+".rx")`;
+			    $VKhanKeyFrameChk=1;
+			};
+			if(`keyframe -q -kc ($VKhanFKCtrl[$VKhanArray]+".ry")`){
+			    $VKhanFindKeyFrame[($VKhanArray*7)+4]=`findKeyframe -t $VKhanKeyFrame -w previous ($VKhanFKCtrl[$VKhanArray]+".ry")`;
+			    $VKhanKeyFrameChk=1;
+			};
+			if(`keyframe -q -kc ($VKhanFKCtrl[$VKhanArray]+".rz")`){
+			    $VKhanFindKeyFrame[($VKhanArray*7)+5]=`findKeyframe -t $VKhanKeyFrame -w previous ($VKhanFKCtrl[$VKhanArray]+".rz")`;
+			    $VKhanKeyFrameChk=1;
+			};
+			if(`keyframe -q -kc ($VKhanFKCtrl[$VKhanArray]+".sx")`){
+			    $VKhanFindKeyFrame[($VKhanArray*7)+6]=`findKeyframe -t $VKhanKeyFrame -w previous ($VKhanFKCtrl[$VKhanArray]+".sx")`;
+			    $VKhanKeyFrameChk=1;
+			};
+			$VKhanArray++;
+		};
+		$VKhanPreviousKeyFrame=$VKhanFindKeyFrame[0];
+		for($VKhanArray=1;$VKhanArray<21;){
+			if($VKhanPreviousKeyFrame<$VKhanFindKeyFrame[$VKhanArray])$VKhanPreviousKeyFrame=$VKhanFindKeyFrame[$VKhanArray];
+			$VKhanArray++;
+		};
+		if($VKhanKeyFrameChk){
+			setKeyframe $VKhanIKFKAttr;
+			currentTime $VKhanPreviousKeyFrame -u 1;
+			if(`getAttr $VKhanIKFKAttr`>0.5){
+				VKhanIKFKSwitch $VkhanNode 0;
+				setAttr $VKhanIKFKAttr 1;
+			}else{
+				VKhanIKFKSwitch $VkhanNode 1;
+				setAttr $VKhanIKFKAttr 0;
+			};
+			currentTime $VKhanKeyFrame -u 1;
+		};
+		VKhanIKFKSwitch $VkhanNode 0;
+	};
+};
+
+global proc VKhanFollow (string $VKhanCtrl, int $VKhanFollowValue){
+	vector $VKhanTranslateValue,$VKhanCenterValue,$VKhanRotateValue;
+
+	$VKhanTranslateValue=`xform -q -ws -rp $VKhanCtrl`;
+	$VKhanCenterValue=`xform -q -os -rp $VKhanCtrl`;
+	$VKhanRotateValue=`xform -q -ws -ro $VKhanCtrl`;
+	setAttr ($VKhanCtrl+".Follow") $VKhanFollowValue;
+	xform -ws -t ($VKhanTranslateValue.x) ($VKhanTranslateValue.y) ($VKhanTranslateValue.z) $VKhanCtrl;
+	$VKhanTranslateValue=`getAttr ($VKhanCtrl+".t")`;
+	$VKhanTranslateValue-=$VKhanCenterValue;
+	setAttr ($VKhanCtrl+".t") ($VKhanTranslateValue.x) ($VKhanTranslateValue.y) ($VKhanTranslateValue.z);
+	xform -ws  -ro ($VKhanRotateValue.x) ($VKhanRotateValue.y) ($VKhanRotateValue.z) $VKhanCtrl;
+};
+
+global proc VKhanPoseSet (string $VkhanNode, string $VkhanPart, int $VkhanSetOption){
+	string	$VKhanAttrList[]=`listAttr -ud $VkhanNode`,$VKhanAttr,$VKhanAttrConnectionList[],$VKhanCtrl,$VKhanCtrlList="";
+	int		$VKhanOrderList[],$VKhanOrder,$VKhanArray;
+
+	$VKhanAttrConnectionList=`listConnections ($VkhanNode+".id")`;
+
+	if(size($VKhanAttrConnectionList[0])&&attributeExists("Order",$VKhanAttrConnectionList[0])){
+		$VKhanOrderList=`getAttr -mi ($VKhanAttrConnectionList[0]+".Order")`;
+		$VKhanArray=0;
+		for($VKhanOrder in $VKhanOrderList){
+		    $VKhanCtrl=`getAttr ($VKhanAttrConnectionList[0]+".Order["+$VKhanOrder+"]")`;
+			if(stringArrayContains($VKhanCtrl,$VKhanAttrList)){
+				stringArrayInsertAtIndex($VKhanArray,$VKhanAttrList,$VKhanCtrl);
+				$VKhanAttrList=stringArrayRemoveDuplicates($VKhanAttrList);
+				$VKhanArray++;
+			}
+		}
+	}
+
+	for($VKhanAttr in $VKhanAttrList){
+		$VKhanAttrConnectionList=`listConnections ($VkhanNode+"."+$VKhanAttr)`;
+		for($VKhanCtrl in $VKhanAttrConnectionList){
+			if(`gmatch $VkhanPart "*All*"`){
+				if($VkhanSetOption==4){
+					VKhanSetBindPose $VKhanCtrl;
+				}else{
+					$VKhanCtrlList+=" "+$VKhanCtrl;
+				};
+			}else if(`gmatch $VkhanPart "*Fly*"`&&!`gmatch $VKhanAttr "*All*"`){
+				if($VkhanSetOption==4){
+					VKhanSetBindPose $VKhanCtrl;
+				}else{
+					$VKhanCtrlList+=" "+$VKhanCtrl;
+				};
+			}else if(`gmatch $VkhanPart "*Body*"`&&!`gmatch $VKhanAttr "*All*"`&&!`gmatch $VKhanAttr "*Fly*"`){
+				if($VkhanSetOption==4){
+					VKhanSetBindPose $VKhanCtrl;
+				}else{
+					$VKhanCtrlList+=" "+$VKhanCtrl;
+				};
+			}else if(`gmatch $VkhanPart "*Arms*"`){
+				if(`gmatch $VKhanAttr "*Arm*"`||`gmatch $VKhanAttr "*Finger*"`){
+					if($VkhanSetOption==4){
+						VKhanSetBindPose $VKhanCtrl;
+					}else{
+						$VKhanCtrlList+=" "+$VKhanCtrl;
+					};
+				};
+			}else if(`gmatch $VkhanPart "*Legs*"`){
+				if(`gmatch $VKhanAttr "*Leg*"`||`gmatch $VKhanAttr "*Toe*"`){
+					if($VkhanSetOption==4){
+						VKhanSetBindPose $VKhanCtrl;
+					}else{
+						$VKhanCtrlList+=" "+$VKhanCtrl;
+					};
+				};
+			}else if(`gmatch $VkhanPart ("*Head*")`){
+				if(`gmatch $VKhanAttr "*Head*"`||`gmatch $VKhanAttr "*Facial*"`||`gmatch $VKhanAttr "*Hair*"`){
+					if($VkhanSetOption==4){
+						VKhanSetBindPose $VKhanCtrl;
+					}else{
+						$VKhanCtrlList+=" "+$VKhanCtrl;
+					};
+				};
+			}else if(`gmatch $VkhanPart ("*"+$VKhanAttr+"*")`){
+				if($VkhanSetOption==4){
+					VKhanSetBindPose $VKhanCtrl;
+				}else{
+					$VKhanCtrlList+=" "+$VKhanCtrl;
+				};
+			};
+		};
+	};
+	if(`gmatch $VkhanPart "Selected"`){
+		$VKhanAttrConnectionList=`ls -sl`;
+		for($VKhanCtrl in $VKhanAttrConnectionList){
+			if(attributeExists("VKhanRigMenuItem",$VKhanCtrl)){
+				if($VkhanSetOption==4){
+					VKhanSetBindPose $VKhanCtrl;
+				}else{
+					$VKhanCtrlList+=" "+$VKhanCtrl;
+				};
+			};
+		};
+	};
+	if($VKhanCtrlList==""){
+		$VKhanCtrlList=" "+$VkhanPart;
+	};
+	if($VkhanSetOption==0){
+		eval("select -r"+$VKhanCtrlList);
+	}else if($VkhanSetOption==1){
+		eval("setKeyframe"+$VKhanCtrlList);
+	}else if($VkhanSetOption==2){
+		eval("copyKey"+$VKhanCtrlList);
+		if(`optionVar -exists "VKhanCopyKeyPart"`){
+			optionVar -remove "VKhanCopyKeyPart";
+		};
+		optionVar -sv "VKhanCopyKeyPart" $VkhanPart;
+		if(`optionVar -exists "VKhanCopyKeyFrame"`){
+			optionVar -remove "VKhanCopyKeyFrame";
+		};
+		optionVar -fv "VKhanCopyKeyFrame" `currentTime -q`;
+	}else if($VkhanSetOption==3&&`optionVar -exists "VKhanCopyKeyPart"`&&`optionVar -exists "VKhanCopyKeyFrame"`){
+		eval("pasteKey -to "+(`currentTime -q`-(`optionVar -q "VKhanCopyKeyFrame"`))+" "+$VKhanCtrlList);
+	}else if($VkhanSetOption==5){
+		VKhanControlerVisibilityOnOff $VKhanCtrlList 1;
+	}else if($VkhanSetOption==6){
+		VKhanControlerVisibilityOnOff $VKhanCtrlList 0;
+	};
+};
+
+global proc VKhanControlerVisibilityOnOff (string $VKhanCtrlList,int $VKhanSetOption){
+	string	$VKhanCtrlListArray[]=stringToStringArray($VKhanCtrlList," "),$VKhanCrtCtrl,$VKhanCtrlAttrList[],$VKhanCrtAttr,$VKhanLowerStr;
+	for($VKhanCrtCtrl in $VKhanCtrlListArray){
+		$VKhanCtrlAttrList=`listAttr -ud -u -cb -se $VKhanCrtCtrl`;
+		for($VKhanCrtAttr in $VKhanCtrlAttrList){
+			if(`gmatch (tolower($VKhanCrtAttr)) "*vis*"`){
+				setAttr ($VKhanCrtCtrl+"."+$VKhanCrtAttr) $VKhanSetOption;
+			}
+		}
+	}
+};
+
+global proc VKhanSetBindPose (string $VKhanBindPoseCtrl){
+	string	$VKhanBindPoseCtrlAttrList[],$VKhanBindPoseAttr;
+	float	$VKhanAttrValue;
+	int		$VKhanAttrArray[],$VKhanAttrNum;
+	if(size(`ls $VKhanBindPoseCtrl`)){
+		$VKhanBindPoseCtrlAttrList=`listAttr -k -u -m -sa $VKhanBindPoseCtrl`;
+		for($VKhanBindPoseAttr in $VKhanBindPoseCtrlAttrList){
+			if(`gmatch $VKhanBindPoseAttr "*IK*FK*"`||`gmatch $VKhanBindPoseAttr "*FK*IK*"`||`gmatch $VKhanBindPoseAttr "*Ik*Fk*"`||`gmatch $VKhanBindPoseAttr "*Fk*Ik*"`||`gmatch $VKhanBindPoseAttr "*ik*fk*"`||`gmatch $VKhanBindPoseAttr "*fk*ik*"`||`gmatch $VKhanBindPoseAttr "*Follow*"`||size(`listConnections -t hairSystem ($VKhanBindPoseCtrl+"."+$VKhanBindPoseAttr)`)){
+			}else if((`gmatch $VKhanBindPoseAttr "*scale*"`&&`getAttr -k ($VKhanBindPoseCtrl+"."+$VKhanBindPoseAttr)`)||(`gmatch $VKhanBindPoseAttr "*visibility*"`&&`getAttr -k ($VKhanBindPoseCtrl+"."+$VKhanBindPoseAttr)`)){
+				setAttr ($VKhanBindPoseCtrl+"."+$VKhanBindPoseAttr) 1;
+			}else if(`getAttr -k ($VKhanBindPoseCtrl+"."+$VKhanBindPoseAttr)`){
+				setAttr ($VKhanBindPoseCtrl+"."+$VKhanBindPoseAttr) 0;
+			};
+		};
+		if(`attributeExists "BindPoseAttrName" $VKhanBindPoseCtrl`){
+			$VKhanAttrArray=`getAttr -mi ($VKhanBindPoseCtrl+".BindPoseAttrName")`;
+			for($VKhanAttrNum in $VKhanAttrArray){
+				$VKhanBindPoseAttr=`getAttr ($VKhanBindPoseCtrl+".BindPoseAttrName["+$VKhanAttrNum+"]")`;
+				if(`attributeExists $VKhanBindPoseAttr $VKhanBindPoseCtrl`){
+					if(!`getAttr -l ($VKhanBindPoseCtrl+"."+$VKhanBindPoseAttr)`&&`getAttr -k ($VKhanBindPoseCtrl+"."+$VKhanBindPoseAttr)`){
+						$VKhanAttrValue=`getAttr ($VKhanBindPoseCtrl+".BindPoseAttrValue["+$VKhanAttrNum+"]")`;
+						setAttr ($VKhanBindPoseCtrl+"."+$VKhanBindPoseAttr) $VKhanAttrValue;
+					};
+				};
+			};
+		};
+	};
+};
+
+global proc VKhanMirrorSet (string $VkhanNode, string $VkhanPart, int $VkhanSetOption){
+	string $VKhanAttrList[]=`listAttr -ud $VkhanNode`,$VKhanAttr,$VKhanAttrConnectionList[],$VKhanCtrl,$VKhanMirrorTarget[];
+	for($VKhanAttr in $VKhanAttrList){
+		$VKhanAttrConnectionList=`listConnections ($VkhanNode+"."+$VKhanAttr)`;
+		for($VKhanCtrl in $VKhanAttrConnectionList){
+   			if(`gmatch $VkhanPart "*All*"`){
+   				if($VkhanSetOption<3&&!`attributeExists "MirrorLeft" $VKhanCtrl`){
+   					VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   				}else if($VkhanSetOption==3&&!`attributeExists "MirrorRight" $VKhanCtrl`){
+   					VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   				};
+   			}else if(`gmatch $VkhanPart "*Fly*"`&&!`gmatch $VKhanAttr "*All*"`){
+   				if($VkhanSetOption<3&&!`attributeExists "MirrorLeft" $VKhanCtrl`){
+   					VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   				}else if($VkhanSetOption==3&&!`attributeExists "MirrorRight" $VKhanCtrl`){
+   					VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   				};
+   			}else if(`gmatch $VkhanPart "*Body*"`&&!`gmatch $VKhanAttr "*All*"`&&!`gmatch $VKhanAttr "*Fly*"`){
+   				if($VkhanSetOption<3&&!`attributeExists "MirrorLeft" $VKhanCtrl`){
+   					VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   				}else if($VkhanSetOption==3&&!`attributeExists "MirrorRight" $VKhanCtrl`){
+   					VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   				};
+   			}else if(`gmatch $VkhanPart "*Arms*"`){
+   				if(`gmatch $VKhanAttr "*Arm*"`||`gmatch $VKhanAttr "*Finger*"`){
+   					if($VkhanSetOption<3&&!`attributeExists "MirrorLeft" $VKhanCtrl`){
+   						VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   					}else if($VkhanSetOption==3&&!`attributeExists "MirrorRight" $VKhanCtrl`){
+   						VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   					};
+   				};
+   			}else if(`gmatch $VkhanPart "*Fingers*"`){
+   				if(`gmatch $VKhanAttr "*Finger*"`){
+   					if($VkhanSetOption<3&&!`attributeExists "MirrorLeft" $VKhanCtrl`){
+   						VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   					}else if($VkhanSetOption==3&&!`attributeExists "MirrorRight" $VKhanCtrl`){
+   						VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   					};
+   				};
+   			}else if(`gmatch $VkhanPart "*Legs*"`){
+   				if(`gmatch $VKhanAttr "*Leg*"`||`gmatch $VKhanAttr "*Toe*"`){
+   					if($VkhanSetOption<3&&!`attributeExists "MirrorLeft" $VKhanCtrl`){
+   						VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   					}else if($VkhanSetOption==3&&!`attributeExists "MirrorRight" $VKhanCtrl`){
+   						VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   					};
+   				};
+   			}else if(`gmatch $VkhanPart "*Toes*"`){
+   				if(`gmatch $VKhanAttr "*Toe*"`){
+   					if($VkhanSetOption<3&&!`attributeExists "MirrorLeft" $VKhanCtrl`){
+   						VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   					}else if($VkhanSetOption==3&&!`attributeExists "MirrorRight" $VKhanCtrl`){
+   						VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   					};
+   				};
+   			}else if(`gmatch $VkhanPart ("*Head*")`){
+   				if(`gmatch $VKhanAttr "*Head*"`||`gmatch $VKhanAttr "*Facial*"`||`gmatch $VKhanAttr "*Hair*"`){
+   					if($VkhanSetOption<3&&!`attributeExists "MirrorLeft" $VKhanCtrl`){
+   						VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   					}else if($VkhanSetOption==3&&!`attributeExists "MirrorRight" $VKhanCtrl`){
+   						VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+   					};
+   				};
+			}else if(`gmatch $VkhanPart ("*"+$VKhanAttr+"*")`){
+				if($VkhanSetOption<3&&!`attributeExists "MirrorLeft" $VKhanCtrl`){
+					VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+				}else if($VkhanSetOption==3&&!`attributeExists "MirrorRight" $VKhanCtrl`){
+					VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+				};
+			};
+		};
+	};
+	if(`gmatch $VkhanPart "Selected"`){
+		$VKhanAttrConnectionList=`ls -sl`;
+		for($VKhanCtrl in $VKhanAttrConnectionList){
+			if(attributeExists("VKhanRigMenuItem",$VKhanCtrl)){
+				$VKhanMirrorTarget=`listConnections ($VKhanCtrl+".MirrorTarget")`;
+				if($VkhanSetOption==2&&!`attributeExists "MirrorLeft" $VKhanCtrl`){
+					VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+				}else if($VkhanSetOption==3&&!`attributeExists "MirrorRight" $VKhanCtrl`){
+					VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+				}else if($VkhanSetOption==1&&isSameObject($VKhanCtrl,$VKhanMirrorTarget[0])){
+					VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+				}else if($VkhanSetOption==1&&!isSameObject($VKhanCtrl,$VKhanMirrorTarget[0])){
+					$VKhanAttrConnectionList=stringArrayRemove($VKhanMirrorTarget,$VKhanAttrConnectionList);
+					VKhanSetMirrorPose $VKhanCtrl $VkhanSetOption;
+				};
+			};
+		};
+	};
+};
+
+global proc VKhanSetMirrorPose(string $VKhanMirrorCtrl,int $VKhanMirrorOption){
+	string	$VKhanMirrorTarget[],$VKhanBindPoseCtrlAttrList[],$VKhanBindPoseAttr,$VKhanRigMenuList[]=`listConnections ($VKhanMirrorCtrl+".VKhanRigMenuItem")`,
+			$VKhanMirrorAttrList[],$VKhanMirrorAttr,$VKhanMirrorDirection[]={"Center","Right","Left"};
+	vector	$MirrorTranslate,$MirrorRotate;
+	float	$VKhanCtrlAttrValue[];
+	int		$VKhanArray,$VKhanMirrorAttrChk=0,$VKhanMirrorAttrMax;
+	$VKhanMirrorTarget=`listConnections ($VKhanMirrorCtrl+".MirrorTarget")`;
+	$MirrorTranslate=`getAttr ($VKhanMirrorCtrl+".MirrorTranslate")`;
+	$MirrorRotate=`getAttr ($VKhanMirrorCtrl+".MirrorRotate")`;
+   	$VKhanBindPoseCtrlAttrList=`listAttr -k -u -m -sa $VKhanMirrorCtrl`;
+
+	if(`attributeExists "MirrorCenter" $VKhanMirrorCtrl`){
+		$VKhanMirrorAttrChk=1;
+	}else if(`attributeExists "MirrorRight" $VKhanMirrorCtrl`){
+		$VKhanMirrorAttrChk=2;
+	}else if(`attributeExists "MirrorLeft" $VKhanMirrorCtrl`){
+		$VKhanMirrorAttrChk=3;
+	};
+	if($VKhanMirrorAttrChk>0){
+		$VKhanMirrorAttrMax=size(`listConnections ($VKhanMirrorCtrl+".Mirror"+$VKhanMirrorDirection[$VKhanMirrorAttrChk-1])`);
+		for($VKhanArray=0;$VKhanArray<$VKhanMirrorAttrMax;){
+			$VKhanMirrorAttrList[$VKhanArray]=`connectionInfo -sfd ($VKhanMirrorCtrl+".Mirror"+$VKhanMirrorDirection[$VKhanMirrorAttrChk-1]+"["+$VKhanArray+"]")`;
+			$VKhanArray++;
+		};
+	};
+	$VKhanArray=0;
+   	for($VKhanBindPoseAttr in $VKhanBindPoseCtrlAttrList){
+		$VKhanCtrlAttrValue[$VKhanArray]=`getAttr ($VKhanMirrorCtrl+"."+$VKhanBindPoseAttr)`;
+		if(`gmatch $VKhanBindPoseAttr "translateX"`){
+			if(`gmatch $VKhanMirrorCtrl $VKhanMirrorTarget[0]`&&$VKhanMirrorOption>1){
+				if(($MirrorTranslate.x)==-1){
+					$VKhanCtrlAttrValue[$VKhanArray]=0;
+				};
+			}else{
+				$VKhanCtrlAttrValue[$VKhanArray]*=($MirrorTranslate.x);
+			};
+		}else if(`gmatch $VKhanBindPoseAttr "translateY"`){
+			if(`gmatch $VKhanMirrorCtrl $VKhanMirrorTarget[0]`&&$VKhanMirrorOption>1){
+				if(($MirrorTranslate.y)==-1){
+					$VKhanCtrlAttrValue[$VKhanArray]=0;
+				};
+			}else{
+				$VKhanCtrlAttrValue[$VKhanArray]*=($MirrorTranslate.y);
+			};
+		}else if(`gmatch $VKhanBindPoseAttr "translateZ"`){
+			if(`gmatch $VKhanMirrorCtrl $VKhanMirrorTarget[0]`&&$VKhanMirrorOption>1){
+				if(($MirrorTranslate.z)==-1){
+					$VKhanCtrlAttrValue[$VKhanArray]=0;
+				};
+			}else{
+				$VKhanCtrlAttrValue[$VKhanArray]*=($MirrorTranslate.z);
+			};
+		}else if(`gmatch $VKhanBindPoseAttr "rotateX"`){
+			if(`gmatch $VKhanMirrorCtrl $VKhanMirrorTarget[0]`&&$VKhanMirrorOption>1){
+				if(($MirrorRotate.x)==-1){
+					$VKhanCtrlAttrValue[$VKhanArray]=0;
+				};
+			}else{
+				$VKhanCtrlAttrValue[$VKhanArray]*=($MirrorRotate.x);
+			};
+		}else if(`gmatch $VKhanBindPoseAttr "rotateY"`){
+			if(`gmatch $VKhanMirrorCtrl $VKhanMirrorTarget[0]`&&$VKhanMirrorOption>1){
+				if(($MirrorRotate.y)==-1){
+					$VKhanCtrlAttrValue[$VKhanArray]=0;
+				};
+			}else{
+				$VKhanCtrlAttrValue[$VKhanArray]*=($MirrorRotate.y);
+			};
+		}else if(`gmatch $VKhanBindPoseAttr "rotateZ"`){
+			if(`gmatch $VKhanMirrorCtrl $VKhanMirrorTarget[0]`&&$VKhanMirrorOption>1){
+				if(($MirrorRotate.z)==-1){
+					$VKhanCtrlAttrValue[$VKhanArray]=0;
+				};
+			}else{
+				$VKhanCtrlAttrValue[$VKhanArray]*=($MirrorRotate.z);
+			};
+		};
+		$VKhanArray++;
+   	};
+	if($VKhanMirrorOption==1&&!`gmatch $VKhanMirrorCtrl $VKhanMirrorTarget[0]`){
+	   	for($VKhanBindPoseAttr in $VKhanBindPoseCtrlAttrList){
+			$VKhanCtrlAttrValue[$VKhanArray]=`getAttr ($VKhanMirrorTarget[0]+"."+$VKhanBindPoseAttr)`;
+			if(`gmatch $VKhanBindPoseAttr "translateX"`){
+				$VKhanCtrlAttrValue[$VKhanArray]*=($MirrorTranslate.x);
+			}else if(`gmatch $VKhanBindPoseAttr "translateY"`){
+				$VKhanCtrlAttrValue[$VKhanArray]*=($MirrorTranslate.y);
+			}else if(`gmatch $VKhanBindPoseAttr "translateZ"`){
+				$VKhanCtrlAttrValue[$VKhanArray]*=($MirrorTranslate.z);
+			}else if(`gmatch $VKhanBindPoseAttr "rotateX"`){
+				$VKhanCtrlAttrValue[$VKhanArray]*=($MirrorRotate.x);
+			}else if(`gmatch $VKhanBindPoseAttr "rotateY"`){
+				$VKhanCtrlAttrValue[$VKhanArray]*=($MirrorRotate.y);
+			}else if(`gmatch $VKhanBindPoseAttr "rotateZ"`){
+				$VKhanCtrlAttrValue[$VKhanArray]*=($MirrorRotate.z);
+			};
+ 			$VKhanArray++;
+  		};
+	};
+	if($VKhanMirrorAttrChk>0){
+		for($VKhanMirrorAttr in $VKhanMirrorAttrList){
+			$VKhanCtrlAttrValue[$VKhanArray]=`getAttr $VKhanMirrorAttr`;
+ 			$VKhanArray++;
+		};
+	};
+	$VKhanArray=0;
+   	for($VKhanBindPoseAttr in $VKhanBindPoseCtrlAttrList){
+   	    if(`getAttr -k ($VKhanMirrorTarget[0]+"."+$VKhanBindPoseAttr)`){
+    		setAttr ($VKhanMirrorTarget[0]+"."+$VKhanBindPoseAttr) $VKhanCtrlAttrValue[$VKhanArray];
+		};
+		$VKhanArray++;
+	};
+	if($VKhanMirrorOption==1&&!`gmatch $VKhanMirrorCtrl $VKhanMirrorTarget[0]`){
+	   	for($VKhanBindPoseAttr in $VKhanBindPoseCtrlAttrList){
+			setAttr ($VKhanMirrorCtrl+"."+$VKhanBindPoseAttr) $VKhanCtrlAttrValue[$VKhanArray];
+			$VKhanArray++;
+		};
+	};
+	if($VKhanMirrorAttrChk>0){
+		for($VKhanMirrorAttrChk=0;$VKhanMirrorAttrChk<($VKhanMirrorAttrMax/2);){
+			if($VKhanMirrorOption==1){
+			    if(`gmatch $VKhanMirrorAttrList[$VKhanMirrorAttrChk*2] $VKhanMirrorAttrList[($VKhanMirrorAttrChk*2)+1]`){
+    				setAttr $VKhanMirrorAttrList[$VKhanMirrorAttrChk*2] ($VKhanCtrlAttrValue[$VKhanArray+($VKhanMirrorAttrChk*2)+1]*-1);
+    			}else{
+    				setAttr $VKhanMirrorAttrList[$VKhanMirrorAttrChk*2] $VKhanCtrlAttrValue[$VKhanArray+($VKhanMirrorAttrChk*2)+1];
+    				setAttr $VKhanMirrorAttrList[($VKhanMirrorAttrChk*2)+1] $VKhanCtrlAttrValue[$VKhanArray+($VKhanMirrorAttrChk*2)];
+    			};
+			};
+			if($VKhanMirrorOption==2){
+			    if(`gmatch $VKhanMirrorAttrList[$VKhanMirrorAttrChk*2] $VKhanMirrorAttrList[($VKhanMirrorAttrChk*2)+1]`){
+	    			setAttr $VKhanMirrorAttrList[$VKhanMirrorAttrChk*2] 0;
+    			}else{
+	    			setAttr $VKhanMirrorAttrList[$VKhanMirrorAttrChk*2] $VKhanCtrlAttrValue[$VKhanArray+($VKhanMirrorAttrChk*2)+1];
+    			};
+			};
+			if($VKhanMirrorOption==3){
+			    if(`gmatch $VKhanMirrorAttrList[$VKhanMirrorAttrChk*2] $VKhanMirrorAttrList[($VKhanMirrorAttrChk*2)+1]`){
+    				setAttr $VKhanMirrorAttrList[($VKhanMirrorAttrChk*2)+1] 0;
+    			}else{
+    				setAttr $VKhanMirrorAttrList[($VKhanMirrorAttrChk*2)+1] $VKhanCtrlAttrValue[$VKhanArray+($VKhanMirrorAttrChk*2)];
+    			};
+			};
+			$VKhanMirrorAttrChk++;
+		};
+	};
+};
+
+global proc VKhanHairBakeCmd(string $VKhanBakeNode,int $BakeChk){
+	string	$VKhanHairPointGrp[]=`listConnections ($VKhanBakeNode+".BakePoint")`,$VKhanHairCurrentPoint,$VKhanHairCrtIKHandle,$VKhanHairIKHandle[],$VKhanHairJntConnect[],$VKhanHairBakeJnt[];
+	int		$VKhanArray=0,$VKhanJntSize,$VKhanTimeNum,$VKhanTimeStart=`playbackOptions -q -min`,$VKhanTimeEnd=`playbackOptions -q -max`;
+
+	for($VKhanHairCurrentPoint in $VKhanHairPointGrp){
+		if(!size(`listConnections -t pairBlend -s 1 -d 0 $VKhanHairCurrentPoint`)&&!size(`ls -typ joint $VKhanHairCurrentPoint`)){
+			$VKhanHairJntConnect=`orientConstraint -q -tl $VKhanHairCurrentPoint`;
+			if(size(`ls -typ joint $VKhanHairJntConnect[0]`)){
+				$VKhanHairBakeJnt[$VKhanArray]=$VKhanHairJntConnect[0];
+			}
+			$VKhanArray++;
+		}else if(size(`ls -typ joint $VKhanHairCurrentPoint`)){
+			$VKhanHairBakeJnt[$VKhanArray]=$VKhanHairCurrentPoint;
+			$VKhanArray++;
+		}
+	}
+
+	$VKhanArray=0;
+	for($VKhanHairCurrentPoint in $VKhanHairBakeJnt){
+		$VKhanHairJntConnect=`listConnections -t ikHandle -s 0 -d 1 $VKhanHairCurrentPoint`;
+		if(size(`ls $VKhanHairJntConnect[0]`)){
+		    $VKhanHairCrtIKHandle=$VKhanHairJntConnect[0];
+		    $VKhanHairIKHandle[$VKhanArray]=$VKhanHairCrtIKHandle;
+		    $VKhanArray++;
+		}
+	}
+
+	if($BakeChk==1){
+		progressWindow -t "Hair Bake Simulation for Each Character by Joong-su.Han(vkhanskel@gmail.com)" -min $VKhanTimeStart -max $VKhanTimeEnd -pr $VKhanTimeStart -ii 1;
+		for($VKhanTimeNum=$VKhanTimeStart;$VKhanTimeNum<=$VKhanTimeEnd;){
+			currentTime -e $VKhanTimeNum -u 1;
+			if(`progressWindow -q -ic`){
+				$VKhanTimeNum=$VKhanTimeEnd;
+			}else{
+				for($VKhanHairCurrentPoint in $VKhanHairBakeJnt){
+					setKeyframe -at t -at r -at s $VKhanHairCurrentPoint;
+				};
+				if(($VKhanTimeNum/2)%5==0)$VKhanHairProgress="Baking\t";
+				if(($VKhanTimeNum/2)%5==1)$VKhanHairProgress="Baking.\t";
+				if(($VKhanTimeNum/2)%5==2)$VKhanHairProgress="Baking..\t";
+				if(($VKhanTimeNum/2)%5==3)$VKhanHairProgress="Baking...\t";
+				if(($VKhanTimeNum/2)%5==4)$VKhanHairProgress="Baking....\t";
+				progressWindow -e -st $VKhanHairProgress -pr $VKhanTimeNum;
+			}
+			$VKhanTimeNum++;
+		}
+		progressWindow -e -endProgress;
+	}
+	if($BakeChk==1){
+		for($VKhanHairCrtIKHandle in $VKhanHairIKHandle){
+			setAttr ($VKhanHairCrtIKHandle+".ikb") 0;
+		}
+	}else if($BakeChk==2){
+			select -r $VKhanHairBakeJnt;
+	}else{
+		for($VKhanHairCurrentPoint in $VKhanHairBakeJnt){
+			cutKey $VKhanHairCurrentPoint;
+		}
+		for($VKhanHairCrtIKHandle in $VKhanHairIKHandle){
+			setAttr ($VKhanHairCrtIKHandle+".ikb") 1;
+		}
+	}
+}
+
+global proc VKhanAllHairBakeCmd(int $BakeChk){
+	string	$VKhanHairSystem[]=`ls -l -typ hairSystem`,$VKhanHairCrtSystem,$VKhanHairFollicle[],$VKhanHairCrtFollicle,$VKhanHairOutput[],$VKhanHairJntList[],$VKhanHairCrtJnt,
+			$VKhanHairBakeJnt[],$VKhanHairCurrentJnt,$VKhanHairBakeJntAdd[]=`ls -l -typ joint "*Bake*"`,$VKhanHairBakeJntNSAdd[]=`ls -l -typ joint "*:*Bake*"`,
+			$VKhanHairCrtIKHandle,$VKhanHairIKHandle[],$VKhanHairJntConnect[];
+	int		$VKhanArray=0,$VKhanJntSize,$VKhanTimeNum,$VKhanTimeStart=`playbackOptions -q -min`,$VKhanTimeEnd=`playbackOptions -q -max`;
+	for($VKhanHairCrtSystem in $VKhanHairSystem){
+		$VKhanHairFollicle=`listConnections -s 1 -sh 1 ($VKhanHairCrtSystem+".oh")`;
+		for($VKhanHairCrtFollicle in $VKhanHairFollicle){
+			$VKhanHairOutput=`listConnections -s 1 -sh 1 ($VKhanHairCrtFollicle+".ocr")`;
+			if(size($VKhanHairOutput[0]))$VKhanHairOutput=`listConnections -s 1 -sh 1 ($VKhanHairOutput[0]+".ws")`;
+			if(size(`ls -typ ikHandle $VKhanHairOutput[0]`)){
+				$VKhanHairJntList=`ikHandle -q -jl $VKhanHairOutput[0]`;
+				$VKhanHairOutput[0]=`ikHandle -q -ee $VKhanHairOutput[0]`;
+				$VKhanHairOutput=`listConnections -s 1 ($VKhanHairOutput[0]+".tx")`;
+				$VKhanJntSize=size($VKhanHairJntList);
+				$VKhanHairJntList[$VKhanJntSize]=$VKhanHairOutput[0];
+				for($VKhanHairCrtJnt in $VKhanHairJntList){
+					$VKhanHairBakeJnt[$VKhanArray]=$VKhanHairCrtJnt;
+					$VKhanArray++;
+				}
+			}
+		}
+	}
+
+	$VKhanHairBakeJnt=`ls -l -typ joint $VKhanHairBakeJnt`;
+
+	for($VKhanHairCurrentJnt in $VKhanHairBakeJntAdd){
+		$VKhanHairBakeJnt[$VKhanArray]=$VKhanHairCurrentJnt;
+		$VKhanArray++;
+	};
+
+	for($VKhanHairCurrentJnt in $VKhanHairBakeJntNSAdd){
+		$VKhanHairBakeJnt[$VKhanArray]=$VKhanHairCurrentJnt;
+		$VKhanArray++;
+	};
+
+	$VKhanArray=0;
+	for($VKhanHairCurrentJnt in $VKhanHairBakeJnt){
+		$VKhanHairJntConnect=`listConnections -t ikHandle -s 0 -d 1 $VKhanHairCurrentJnt`;
+		if(size(`ls $VKhanHairJntConnect[0]`)){
+		    $VKhanHairCrtIKHandle=$VKhanHairJntConnect[0];
+		    $VKhanHairIKHandle[$VKhanArray]=$VKhanHairCrtIKHandle;
+		    $VKhanArray++;
+		}
+	}
+
+	$VKhanHairBakeJnt=stringArrayRemoveDuplicates($VKhanHairBakeJnt);
+	$VKhanHairIKHandle=stringArrayRemoveDuplicates($VKhanHairIKHandle);
+
+	if($BakeChk==1){
+		progressWindow -t "Hair Bake Simulation for All Character by Joong-su.Han(vkhanskel@gmail.com)" -min $VKhanTimeStart -max $VKhanTimeEnd -pr $VKhanTimeStart -ii 1;
+		for($VKhanTimeNum=$VKhanTimeStart;$VKhanTimeNum<=$VKhanTimeEnd;){
+			currentTime -e $VKhanTimeNum -u 1;
+			if(`progressWindow -q -ic`){
+				$VKhanTimeNum=$VKhanTimeEnd;
+			}else{
+				for($VKhanHairCurrentJnt in $VKhanHairBakeJnt){
+					setKeyframe -at t -at r -at s $VKhanHairCurrentJnt;
+				};
+				if(($VKhanTimeNum/2)%5==0)$VKhanHairProgress="Baking\t";
+				if(($VKhanTimeNum/2)%5==1)$VKhanHairProgress="Baking.\t";
+				if(($VKhanTimeNum/2)%5==2)$VKhanHairProgress="Baking..\t";
+				if(($VKhanTimeNum/2)%5==3)$VKhanHairProgress="Baking...\t";
+				if(($VKhanTimeNum/2)%5==4)$VKhanHairProgress="Baking....\t";
+
+				progressWindow -e -st $VKhanHairProgress -pr $VKhanTimeNum;
+			};
+			$VKhanTimeNum++;
+		};
+		progressWindow -e -endProgress;
+	};
+
+	if($BakeChk){
+		for($VKhanHairCrtIKHandle in $VKhanHairIKHandle){
+			setAttr ($VKhanHairCrtIKHandle+".ikb") 0;
+		}
+	}else{
+		for($VKhanHairCurrentJnt in $VKhanHairBakeJnt){
+			cutKey $VKhanHairCurrentJnt;
+		}
+		for($VKhanHairCrtIKHandle in $VKhanHairIKHandle){
+			setAttr ($VKhanHairCrtIKHandle+".ikb") 1;
+		}
+	}
+}
+
+global proc VKhanFrameCounter() {
+	if(!`headsUpDisplay -ex HUDCurrentFrame`||!`headsUpDisplay -ex HUDFileName`||!`headsUpDisplay -q -vis HUDFocalLength`){
+		if(`headsUpDisplay -ex HUDFileName`){
+			headsUpDisplay -rem HUDFileName;
+		};
+		if(`headsUpDisplay -ex HUDCurrentFrame`){
+			headsUpDisplay -rem HUDCurrentFrame;
+		};
+		headsUpDisplay -rp 9 1;
+		headsUpDisplay -rp 0 7;
+		headsUpDisplay -p 70 -s 9 -b 1 -bs large -ba right -dfs large -lfs large -l "Frame" -c "currentTime -q" -atr HUDCurrentFrame;
+		headsUpDisplay -p 60 -s 0 -b 7 -bs large -ba left -dfs large -ev timeChanged -c VKhanFileName HUDFileName;
+		headsUpDisplay -e -p 60 -s 4 -b 7 -dfs large -lfs large HUDFocalLength;
+		setFocalLengthVisibility 1;
+	}else if(`headsUpDisplay -ex HUDCurrentFrame`&&`headsUpDisplay -ex HUDFileName`&&`headsUpDisplay -q -vis HUDFocalLength`){
+		headsUpDisplay -rem HUDCurrentFrame;
+		headsUpDisplay -rem HUDFileName;
+		setFocalLengthVisibility 0;
+	};
+};
+
+global proc string VKhanFileName() {
+	string $VKhanFileName=`file -q -sn`,$VKhanTokenizeName[];
+	int $VKhantokenizeNum=`tokenize $VKhanFileName "." $VKhanTokenizeName`;
+	$VKhanFileName=basename($VKhanFileName,("."+$VKhanTokenizeName[$VKhantokenizeNum-1]));
+
+	return $VKhanFileName;
+};
+
+global proc VKhanCreateLayer(int $VkhanLayerOption) {
+	if(`window -ex VKhanCreateLayerUI`)	deleteUI -window VKhanCreateLayerUI;
+	if(`windowPref -exists VKhanCreateLayerUI`)windowPref -remove VKhanCreateLayerUI;
+
+	if($VkhanLayerOption==0){
+		window -t "Create Dispaly Layer by Joong-su.Han(vkhanskel@gmail.com)" -w 340 -h 40 -mb 0 -s 1 VKhanCreateLayerUI;
+	}else{
+		window -t "Create Render Layer by Joong-su.Han(vkhanskel@gmail.com)" -w 340 -h 40 -mb 0 -s 1 VKhanCreateLayerUI;
+	};
+
+ 	formLayout -numberOfDivisions 100 VKhanCreateLayerForm;
+
+	text -l "Layer Name" LayerText;
+	if($VkhanLayerOption==0){
+	 	textField -w 230 -aie 1 -ec "createDisplayLayer -n (`textField -q -tx LayerName`);" LayerName;
+	}else{
+	 	textField -w 230 -aie 1 -ec "createRenderLayer -n (`textField -q -tx LayerName`);" LayerName;
+	};
+
+ 	formLayout	-e -af LayerText "left" 15 -af LayerText "top" 12
+			-e -af LayerName "left" 92 -af LayerName "top" 10 VKhanCreateLayerForm;
+	showWindow;
+}
+
+global proc VKhanCreateChangeSelectScript(){
+	string $ScriptJopList[]=`scriptJob -lj`,$CrtScriptJop,$ChangeScriptJop[],$ScriptJopNumString[];
+	int $VKhanNum=0;
+
+	for($CrtScriptJop in $ScriptJopList){
+		if(`gmatch $CrtScriptJop "*VKhanChangeSelectScript*"`)$ChangeScriptJop[$VKhanNum++]=$CrtScriptJop;
+	}
+
+	if(size($ChangeScriptJop)){
+		for($CrtScriptJop in $ChangeScriptJop){
+			if(size($CrtScriptJop)){
+				$ScriptJopNumString=stringToStringArray($CrtScriptJop,":");
+				$VKhanNum=$ScriptJopNumString[0];
+				scriptJob -k $VKhanNum;
+			}
+		}
+	}
+
+	scriptJob -e SelectionChanged "VKhanChangeSelectScript";
+}
+
+global proc VKhanChangeSelectScript(){
+	string	$SelList[]=`ls -sl`,$CrtObj,$ConnectList[];
+	float	$VKhanVersionNumber=getApplicationVersionAsFloat();
+
+	for($CrtObj in $SelList){
+		if(attributeExists("VKhanRigSelection",$CrtObj)){
+			if(size(`listConnections ($CrtObj+".VKhanRigSelection")`)){
+				$ConnectList=`listConnections ($CrtObj+".VKhanRigSelection")`;
+				select -d $CrtObj;
+				select -add $ConnectList;
+			}
+		}
+		if(attributeExists("VKhanRigMenuItem",$CrtObj)&&$VKhanVersionNumber>=2011&&`manipScaleContext -q -mode Scale`!=0) {
+			manipScaleContext -e -mode 0 Scale;
+		}
+		if(attributeExists("VKhanRigMenuItem",$CrtObj)&&(`manipMoveContext -q -pcp Move`||`manipRotateContext -q -pcp Rotate`||`manipScaleContext -q -pcp Scale`)) {
+			optionVar -iv trsManipsPreserveChildPosition 0;
+			manipMoveContext -e -pcp 0 Move;
+			manipRotateContext -e -pcp 0 Rotate;
+			manipScaleContext -e -pcp 0 Scale;
+		}
+	}
+	if(attributeExists("VKhanRigTextureBrowser",$SelList[0])&&size($SelList)==1){
+		if(size(`listConnections ($SelList[0]+".VKhanRigTextureBrowser")`)){
+			$ConnectList=`listConnections ($SelList[0]+".VKhanRigTextureBrowser")`;
+			select -d $SelList[0];
+			fileBrowser(("AEassignTextureCB "+$ConnectList[0]+".ftn"),"Open","image",0);
+		}
+	}
+}
